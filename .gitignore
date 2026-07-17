@@ -1,0 +1,13 @@
+# IDE
+.idea/
+*.iml
+
+# OS
+.DS_Store
+
+# Env (예시 파일 .env.example 만 커밋)
+.env
+.env.local
+
+# 하위 프로젝트의 빌드 산출물은 각 디렉터리의 .gitignore 에서 관리
+# (open_forms_backend/.gitignore, open_forms_frontend/.gitignore)
