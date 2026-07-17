@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: open-forms-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-open_forms}
+      POSTGRES_USER: ${POSTGRES_USER:-open_forms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-open_forms}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - open_forms_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-open_forms} -d ${POSTGRES_DB:-open_forms}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  open_forms_pgdata:
