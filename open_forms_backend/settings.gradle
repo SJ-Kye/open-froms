@@ -1,0 +1,6 @@
+plugins {
+	// JDK 21 toolchain 자동 프로비저닝: 로컬에 JDK 21이 없어도 Gradle이 자동 다운로드하여 빌드/테스트 재현성 확보
+	id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = 'open-forms-backend'
