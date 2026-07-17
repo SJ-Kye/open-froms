@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: open-forms-backend
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/open_forms}
+    username: ${SPRING_DATASOURCE_USERNAME:open_forms}
+    password: ${SPRING_DATASOURCE_PASSWORD:open_forms}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      # Flyway가 스키마의 단일 진실 원천 → 검증만 수행
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+# JWT 설정
+app:
+  jwt:
+    secret: ${JWT_SECRET:change-me-to-a-long-random-secret-at-least-32-bytes}
+    expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
+
+# Swagger UI: /swagger-ui.html
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+logging:
+  level:
+    org.springframework.security: INFO
