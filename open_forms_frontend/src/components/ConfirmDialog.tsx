@@ -16,6 +16,7 @@ export default function ConfirmDialog({
   title,
   description,
   confirmLabel,
+  cancelLabel = '취소',
   danger = false,
   pending = false,
   onConfirm,
@@ -25,6 +26,8 @@ export default function ConfirmDialog({
   title: string
   description: string
   confirmLabel: string
+  /** «취소»가 어색한 경우(예: 이탈 확인의 «머무르기»)에만 바꿉니다. */
+  cancelLabel?: string
   danger?: boolean
   pending?: boolean
   onConfirm: () => void
@@ -61,7 +64,7 @@ export default function ConfirmDialog({
       <p className={styles.description}>{description}</p>
       <div className={styles.actions}>
         <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={pending}>
-          취소
+          {cancelLabel}
         </button>
         <button
           type="button"

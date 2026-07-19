@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, NavLink, Outlet, useParams } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, NavLink, Outlet, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, BarChart3, Inbox, Pencil, Send, Square } from 'lucide-react'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import ErrorBanner from '../../components/ErrorBanner'
@@ -9,6 +9,7 @@ import { toApiError } from '../../lib/apiError'
 import type { FormStatus } from '../../types/api'
 import StatusBadge from './StatusBadge'
 import { nextStatus } from './formStatus'
+import { UnsavedChangesContext } from './unsavedChangesContext'
 import { useChangeStatusMutation, useFormQuery } from './useForms'
 import styles from './FormTabsLayout.module.css'
 
@@ -28,7 +29,49 @@ export default function FormTabsLayout() {
   const { data: form, isPending, isError, error } = useFormQuery(formId)
   const changeStatus = useChangeStatusMutation(formId)
   const showToast = useToast()
+  const navigate = useNavigate()
   const [pendingStatus, setPendingStatus] = useState<FormStatus | null>(null)
+
+  /** 자식 화면(빌더)이 보고한 미저장 변경 건수입니다. */
+  const [unsavedCount, setUnsavedCount] = useState(0)
+  /** 확인을 기다리는 이동입니다. 사용자가 «나가기»를 고르면 그때 실행합니다. */
+  const [pendingLeave, setPendingLeave] = useState<(() => void) | null>(null)
+
+  const requestLeave = useCallback(
+    (go: () => void) => {
+      if (unsavedCount === 0) {
+        go()
+        return
+      }
+      // setState 에 함수를 그대로 넣으면 갱신 함수로 해석되므로 한 겹 감쌉니다.
+      setPendingLeave(() => go)
+    },
+    [unsavedCount],
+  )
+
+  const unsavedChanges = useMemo(
+    () => ({ report: setUnsavedCount, requestLeave }),
+    [requestLeave],
+  )
+
+  // 새로고침·탭 닫기는 라우터가 볼 수 없는 경로라 브라우저에 맡깁니다. 문구는 지정할 수 없고
+  // 브라우저 기본 경고가 뜹니다(사양상 커스텀 메시지는 무시됩니다).
+  useEffect(() => {
+    if (unsavedCount === 0) {
+      return
+    }
+    const handler = (event: BeforeUnloadEvent) => event.preventDefault()
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [unsavedCount])
+
+  const guardedNavigate = (to: string) => (event: React.MouseEvent) => {
+    if (unsavedCount === 0) {
+      return
+    }
+    event.preventDefault()
+    requestLeave(() => navigate(to))
+  }
 
   if (isPending) {
     return <Spinner page />
@@ -47,8 +90,9 @@ export default function FormTabsLayout() {
   const blockedByEmptyQuestions = target === 'PUBLISHED' && form.questions.length === 0
 
   return (
+    <UnsavedChangesContext.Provider value={unsavedChanges}>
     <div className="animate-fade-in">
-      <BackLink />
+      <BackLink onClick={guardedNavigate('/forms')} />
 
       <div className={styles.head}>
         <div>
@@ -80,9 +124,19 @@ export default function FormTabsLayout() {
       </div>
 
       <nav className={styles.tabs}>
-        <Tab to={`/forms/${formId}`} end icon={<Pencil size={15} />} label="편집" />
-        <Tab to={`/forms/${formId}/responses`} icon={<Inbox size={15} />} label="응답" />
-        <Tab to={`/forms/${formId}/dashboard`} icon={<BarChart3 size={15} />} label="집계" />
+        <Tab to={`/forms/${formId}`} end icon={<Pencil size={15} />} label="편집" onClick={guardedNavigate(`/forms/${formId}`)} />
+        <Tab
+          to={`/forms/${formId}/responses`}
+          icon={<Inbox size={15} />}
+          label="응답"
+          onClick={guardedNavigate(`/forms/${formId}/responses`)}
+        />
+        <Tab
+          to={`/forms/${formId}/dashboard`}
+          icon={<BarChart3 size={15} />}
+          label="집계"
+          onClick={guardedNavigate(`/forms/${formId}/dashboard`)}
+        />
       </nav>
 
       {changeStatus.isError && (
@@ -115,7 +169,24 @@ export default function FormTabsLayout() {
         }}
         onCancel={() => setPendingStatus(null)}
       />
+
+      <ConfirmDialog
+        open={pendingLeave !== null}
+        title="저장하지 않은 변경이 있습니다"
+        description={`변경 ${unsavedCount}건이 아직 저장되지 않았습니다. 이 화면을 떠나면 사라집니다.`}
+        confirmLabel="저장하지 않고 나가기"
+        cancelLabel="머무르기"
+        danger
+        onConfirm={() => {
+          const go = pendingLeave
+          // 이동하면 빌더가 언마운트되며 보고를 0 으로 정리합니다.
+          setPendingLeave(null)
+          go?.()
+        }}
+        onCancel={() => setPendingLeave(null)}
+      />
     </div>
+    </UnsavedChangesContext.Provider>
   )
 }
 
@@ -124,16 +195,19 @@ function Tab({
   end,
   icon,
   label,
+  onClick,
 }: {
   to: string
   end?: boolean
   icon: React.ReactNode
   label: string
+  onClick: (event: React.MouseEvent) => void
 }) {
   return (
     <NavLink
       to={to}
       end={end}
+      onClick={onClick}
       className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ''}`}
     >
       {icon}
@@ -142,9 +216,9 @@ function Tab({
   )
 }
 
-function BackLink() {
+function BackLink({ onClick }: { onClick?: (event: React.MouseEvent) => void }) {
   return (
-    <Link to="/forms" className={styles.back}>
+    <Link to="/forms" className={styles.back} onClick={onClick}>
       <ArrowLeft size={16} />
       설문지 목록
     </Link>

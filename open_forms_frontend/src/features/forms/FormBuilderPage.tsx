@@ -12,6 +12,7 @@ import QuickAddPanel from './QuickAddPanel'
 import { STATUS_LABELS } from './formStatus'
 import { draftProblem, emptyDraft, newDraftKey } from './questionDraft'
 import { buildSavePlan, toItem, type BuilderItem } from './savePlan'
+import { useReportUnsavedChanges } from './useUnsavedChanges'
 import { useFormQuery, useSaveBuilderMutation, type SaveOutcome } from './useForms'
 import styles from './FormBuilderPage.module.css'
 
@@ -68,6 +69,7 @@ export default function FormBuilderPage() {
     }
   }, [form])
 
+  useReportUnsavedChanges(changeCount)
 
   if (isPending) {
     return <Spinner page />
