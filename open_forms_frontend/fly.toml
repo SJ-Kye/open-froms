@@ -4,8 +4,8 @@
 app = "open-forms"
 primary_region = "nrt"
 
-[build]
-  dockerfile = "open_forms_frontend/Dockerfile"
+# [build] dockerfile 은 두지 않습니다 — 백엔드 fly.toml 과 같은 이유입니다.
+#   fly deploy --config open_forms_frontend/fly.toml --dockerfile open_forms_frontend/Dockerfile
 
 [http_service]
   internal_port = 8080

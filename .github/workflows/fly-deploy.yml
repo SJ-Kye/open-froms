@@ -1,0 +1,55 @@
+# Fly.io 자동 배포.
+#
+# Fly 의 "Deploy from GitHub" 런치 플로우는 저장소 루트에서 Dockerfile 하나를 찾아 앱 하나를
+# 만드는 방식이라 이 저장소에는 맞지 않습니다(모노레포 + 앱 2개). Actions 에서 --config 와
+# --dockerfile 을 직접 지정하는 이 방식이 그 제약을 받지 않습니다.
+#
+# 두 Dockerfile 모두 빌드 컨텍스트가 저장소 루트라 체크아웃 위치에서 그대로 실행합니다.
+# (build.gradle 의 test 태스크가 ../docs/05-api-design.md 를 입력으로 선언하기 때문입니다.)
+
+name: Fly.io 배포
+
+on:
+  push:
+    branches: [deploy/fly-io]
+  # 코드 변경 없이 다시 배포하고 싶을 때를 위해 수동 실행도 열어둡니다.
+  workflow_dispatch:
+
+concurrency:
+  # 배포가 겹치면 나중 것이 먼저 끝나 이전 이미지가 남을 수 있습니다. 순서대로 흘려보냅니다.
+  group: fly-deploy
+  cancel-in-progress: false
+
+jobs:
+  backend:
+    name: 백엔드 (open-forms-api)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      # --remote-only: 이미지를 Fly 빌더에서 빌드합니다. 러너에 Docker 가 필요 없고,
+      # 빌드 캐시가 Fly 쪽에 남아 두 번째 배포부터 빨라집니다.
+      - name: 배포
+        run: >
+          flyctl deploy --remote-only
+          --config open_forms_backend/fly.toml
+          --dockerfile open_forms_backend/Dockerfile
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  frontend:
+    name: 프론트엔드 (open-forms)
+    # 백엔드를 먼저 올립니다. nginx 는 요청 시점에 업스트림 이름을 풀기 때문에 순서가 틀려도
+    # 곧 복구되지만, 배포 직후 잠깐 502 가 보이는 편이 낫지 않습니다.
+    needs: backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: 배포
+        run: >
+          flyctl deploy --remote-only
+          --config open_forms_frontend/fly.toml
+          --dockerfile open_forms_frontend/Dockerfile
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

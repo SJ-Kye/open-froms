@@ -105,12 +105,36 @@ fly secrets set -a open-forms-api \
 (`build.gradle` 의 `test` 태스크가 `../docs/05-api-design.md` 를 입력으로 선언하기 때문입니다).
 
 ```bash
-fly deploy --config open_forms_backend/fly.toml    # 백엔드 먼저
-fly deploy --config open_forms_frontend/fly.toml
+# --dockerfile 은 생략하지 마십시오. fly.toml 의 build.dockerfile 은 기준 경로가 분명하지
+# 않아 두지 않았고, 플래그 없이 실행하면 루트에서 Dockerfile 을 찾다가 실패합니다.
+fly deploy --config open_forms_backend/fly.toml  --dockerfile open_forms_backend/Dockerfile
+fly deploy --config open_forms_frontend/fly.toml --dockerfile open_forms_frontend/Dockerfile
 
 fly ips list -a open-forms-api                     # 비어 있어야 정상(사설 전용)
 fly logs   -a open-forms-api
 ```
+
+### 자동 배포 (GitHub Actions)
+
+`deploy/fly-io` 브랜치에 push 하면 [`.github/workflows/fly-deploy.yml`](.github/workflows/fly-deploy.yml)
+이 백엔드 → 프론트엔드 순으로 배포합니다. 저장소 Actions 탭에서 수동 실행도 가능합니다.
+
+Fly 의 "Deploy from GitHub" 런치 플로우는 쓰지 않습니다. 저장소 루트에서 Dockerfile 하나를 찾아
+앱 하나를 만드는 방식이라, 루트에 Dockerfile 이 없고 앱이 둘인 이 구조에서는
+`Could not detect runtime or Dockerfile` 로 실패합니다.
+
+준비물은 토큰 하나입니다.
+
+```bash
+# 두 앱을 모두 배포해야 하므로 조직 범위 토큰을 씁니다.
+fly tokens create org -o <조직명>
+```
+
+출력된 값을 GitHub 저장소의 **Settings → Secrets and variables → Actions** 에
+`FLY_API_TOKEN` 이름으로 등록합니다.
+
+> 최소 권한을 원하면 `fly tokens create deploy -a open-forms-api` 처럼 앱별 배포 토큰을 두 개
+> 만들고, 워크플로의 두 job 이 각각 다른 시크릿을 참조하도록 바꾸면 됩니다.
 
 ## 주요 기능
 - 회원가입/로그인 (JWT 인증)

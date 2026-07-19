@@ -5,8 +5,10 @@
 app = "open-forms-api"
 primary_region = "nrt"
 
-[build]
-  dockerfile = "open_forms_backend/Dockerfile"
+# [build] dockerfile 은 두지 않습니다. 이 값의 기준 경로가 fly.toml 위치인지 실행 디렉터리인지
+# 문서상 분명하지 않아, 잘못 풀리면 open_forms_backend/open_forms_backend/Dockerfile 을 찾습니다.
+# 대신 배포할 때 --dockerfile 을 명시합니다(실행 디렉터리 기준이 확실합니다).
+#   fly deploy --config open_forms_backend/fly.toml --dockerfile open_forms_backend/Dockerfile
 
 [env]
   # Fly 사설망은 IPv6 전용입니다. Tomcat 기본 바인드로는 6PN 요청을 받지 못할 수 있어
