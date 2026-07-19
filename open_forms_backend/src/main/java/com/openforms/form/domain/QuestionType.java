@@ -19,5 +19,15 @@ public enum QuestionType {
     RATING,
     NUMBER,
     DATE,
-    TIME
+    TIME;
+
+    /** 선택지를 갖는 선택형 타입인지 여부입니다(SINGLE_CHOICE·DROPDOWN·MULTIPLE_CHOICE). */
+    public boolean isChoice() {
+        return this == SINGLE_CHOICE || this == DROPDOWN || this == MULTIPLE_CHOICE;
+    }
+
+    /** min_value~max_value 범위 메타를 쓰는 타입인지 여부입니다(RATING·NUMBER). */
+    public boolean hasRange() {
+        return this == RATING || this == NUMBER;
+    }
 }

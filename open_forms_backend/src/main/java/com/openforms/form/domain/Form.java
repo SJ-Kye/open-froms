@@ -71,4 +71,15 @@ public class Form extends AuditableEntity {
         }
         this.status = target;
     }
+
+    /**
+     * 질문 편집이 가능한 상태(DRAFT)인지 확인합니다. 발행·종료된 폼의 질문을 바꾸면 이미 수집된 응답과
+     * 어긋나므로, DRAFT 가 아니면 {@link ConflictException}(409)로 막습니다.
+     */
+    public void requireEditable() {
+        if (this.status != FormStatus.DRAFT) {
+            throw new ConflictException("FORM_NOT_EDITABLE",
+                    "발행되었거나 종료된 폼의 질문은 편집할 수 없습니다.");
+        }
+    }
 }

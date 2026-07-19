@@ -62,4 +62,18 @@ public class Question {
         this.minValue = minValue;
         this.maxValue = maxValue;
     }
+
+    /**
+     * 질문 속성을 갱신합니다(수정 시 전량 교체). 선택지는 값이 아니라 별도 엔티티라 서비스가 따로 교체하며,
+     * 여기서는 폼 소속은 바꾸지 않습니다.
+     */
+    public void update(QuestionType type, String title, boolean required, Integer position,
+            Integer minValue, Integer maxValue) {
+        this.type = type;
+        this.title = title;
+        this.required = required;
+        this.position = position;
+        this.minValue = minValue;
+        this.maxValue = maxValue;
+    }
 }
