@@ -8,7 +8,7 @@
 
 > 이 문서의 요청/응답 예시는 **실제로 실행하여 캡처한 값**입니다(로컬 PostgreSQL 기동 → curl 호출). 필드 구성·상태 코드·날짜 표기 모두 실행 결과 그대로이며, 추정으로 적은 값은 없습니다.
 >
-> 이 문서는 **현재 구현이 완료된 엔드포인트만** 담습니다. 응답 조회·대시보드 집계 API 는 설계가 확정되어 있으나 아직 구현 전이라 의도적으로 넣지 않았으며, 구현 시점에 이 문서로 승격합니다(문서-코드 정합 유지).
+> 이 문서는 **현재 구현이 완료된 엔드포인트만** 담습니다. 계획만 있고 구현되지 않은 API 는 넣지 않습니다(문서-코드 정합 유지).
 
 ## 엔드포인트 목록
 
@@ -70,6 +70,20 @@
 
 검증 순서는 **404 → 409 → 400** 입니다. 종료된 폼에 잘못된 값을 보내면 400 이 아니라 409 가 나옵니다. 값을 고쳐도 어차피 제출할 수 없는 상황이라면, 응답자에게 먼저 알려야 할 사실은 "폼이 종료되었다" 이기 때문입니다.
 
+### 응답·집계 (Responses & Analytics) — 소유자만
+| Method | Path | 설명 | 인증 | 성공 | 주요 실패 |
+|---|---|---|---|---|---|
+| GET | `/api/forms/{formId}/responses` | 응답 목록 (페이지네이션) | 🔒 | 200 | 401 / 403 / 404 |
+| GET | `/api/forms/{formId}/responses/{responseId}` | 응답 상세 | 🔒 | 200 | 401 / 403 / 404 |
+| DELETE | `/api/forms/{formId}/responses/{responseId}` | 응답 삭제 | 🔒 | 204 | 401 / 403 / 404 |
+| GET | `/api/forms/{formId}/summary` | 대시보드 집계 | 🔒 | 200 | 401 / 403 / 404 |
+
+**수집된 응답을 읽는 경로는 공개 영역에 하나도 없습니다.** 익명 사용자는 `/api/public/**` 로 제출만 할 수 있고, 읽기는 전부 인증과 소유권 뒤에 있습니다. 익명 설문에서 다른 사람의 응답이 링크만으로 열람된다면 그 설문은 더 이상 익명이 아닙니다.
+
+응답 `id` 도 폼 하위에서만 유효합니다. 다른 폼의 응답 `id` 를 넣으면 `404 RESPONSE_NOT_FOUND` 로, 질문의 `QUESTION_NOT_FOUND` 와 같은 중첩 정합 규칙입니다.
+
+**응답 수정 API 는 없습니다.** 제작자에게 허용된 것은 조회와 삭제뿐이며, 이는 04 의 **응답 불변 정책**(제출 후 수정 불가)이 API 표면에 드러난 결과입니다. 제작자가 응답을 고칠 수 있다면 응답자가 제출하지 않은 내용이 응답자 명의로 남게 됩니다.
+
 **사용 상태 코드**: 200, 201, 204, 400, 401, 403, 404, 409, 500
 
 ## 공통 에러 포맷
@@ -130,6 +144,7 @@
 | `ACCESS_DENIED` | 403 | 소유자가 아닌 리소스 접근 |
 | `FORM_NOT_FOUND` | 404 | 폼 없음 (공개 경로에서는 미발행 폼 포함) |
 | `QUESTION_NOT_FOUND` | 404 | 해당 폼에 그 질문이 없음 |
+| `RESPONSE_NOT_FOUND` | 404 | 해당 폼에 그 응답이 없음 |
 | `USER_NOT_FOUND` | 404 | 토큰의 주체에 해당하는 사용자 없음 |
 | `RESOURCE_NOT_FOUND` | 404 | 매핑된 핸들러가 없는 경로 |
 | `EMAIL_ALREADY_EXISTS` | 409 | 이미 가입된 이메일 |
@@ -402,11 +417,149 @@
 }
 ```
 
+### 응답 목록 — GET /api/forms/1/responses?page=0&size=20 🔒
+응답 `200 OK`
+```json
+{
+  "content": [
+    { "responseId": 3, "submittedAt": "2026-07-19T18:27:31.402113", "answeredCount": 2, "totalQuestions": 4 },
+    { "responseId": 1, "submittedAt": "2026-07-19T18:27:31.238914", "answeredCount": 4, "totalQuestions": 4 }
+  ],
+  "page": 0,
+  "size": 20,
+  "totalElements": 3,
+  "totalPages": 1
+}
+```
+기본 정렬은 최신순(`sort=createdAt,desc`)이며 폼 목록과 같은 `PageResponse` 래퍼를 씁니다.
+
+목록에 답변 내용을 싣지 않는 대신 **`answeredCount` / `totalQuestions`** 를 담습니다. 화면이 "4/4 문항 응답"을 바로 표시하고 완성도가 낮은 응답을 골라볼 수 있습니다. `answeredCount` 는 **답한 질문 수**라 체크박스에서 선택지를 3개 골라도 1로 셉니다. 이 값은 응답마다 질의하지 않고 현재 페이지 전체를 한 번에 집계합니다(N+1 회피).
+
+### 응답 상세 — GET /api/forms/1/responses/1 🔒
+응답 `200 OK`
+```json
+{
+  "responseId": 1,
+  "submittedAt": "2026-07-19T18:27:31.238914",
+  "answers": [
+    {
+      "questionId": 1,
+      "type": "SINGLE_CHOICE",
+      "title": "서비스에 만족하시나요?",
+      "required": true,
+      "answered": true,
+      "selectedOptions": [ { "optionId": 1, "label": "만족" } ],
+      "textValue": null, "numberValue": null, "dateValue": null, "timeValue": null
+    },
+    {
+      "questionId": 2,
+      "type": "MULTIPLE_CHOICE",
+      "title": "관심 분야",
+      "required": false,
+      "answered": true,
+      "selectedOptions": [ { "optionId": 4, "label": "가" }, { "optionId": 6, "label": "다" } ],
+      "textValue": null, "numberValue": null, "dateValue": null, "timeValue": null
+    },
+    {
+      "questionId": 4,
+      "type": "SHORT_TEXT",
+      "title": "의견",
+      "required": false,
+      "answered": false,
+      "selectedOptions": [],
+      "textValue": null, "numberValue": null, "dateValue": null, "timeValue": null
+    }
+  ]
+}
+```
+
+두 가지가 저장 구조와 다릅니다.
+
+- **체크박스의 여러 행이 한 문항으로 묶입니다.** 저장은 "값 하나가 한 행"이라 선택지 2개를 고르면 `answers` 테이블에 2행이지만(04 참고), 화면은 문항 단위로 읽으므로 응답할 때 보낸 모양 그대로 되돌려줍니다.
+- **답하지 않은 문항도 포함합니다.** 무응답을 빼면 화면이 폼 구조를 따로 조회해 대조해야 "이 문항은 무응답"을 그릴 수 있습니다. `answered` 를 명시해, 타입마다 어느 필드를 봐야 하는지 따지지 않고도 무응답을 판정할 수 있게 했습니다.
+
+### 대시보드 집계 — GET /api/forms/1/summary 🔒
+응답 `200 OK`
+```json
+{
+  "formId": 1,
+  "totalResponses": 3,
+  "completionRate": 0.6666666666666666,
+  "responsesByDate": [
+    { "date": "2026-07-19", "count": 3 }
+  ],
+  "questionSummaries": [
+    {
+      "questionId": 1,
+      "type": "SINGLE_CHOICE",
+      "title": "서비스에 만족하시나요?",
+      "required": true,
+      "answeredCount": 3,
+      "average": null,
+      "optionCounts": [
+        { "optionId": 1, "label": "만족", "count": 2 },
+        { "optionId": 2, "label": "보통", "count": 1 },
+        { "optionId": 3, "label": "불만족", "count": 0 }
+      ],
+      "valueCounts": [],
+      "recentTexts": []
+    },
+    {
+      "questionId": 3,
+      "type": "RATING",
+      "title": "추천 점수",
+      "required": true,
+      "answeredCount": 3,
+      "average": 4.0,
+      "optionCounts": [],
+      "valueCounts": [
+        { "value": 3, "count": 1 },
+        { "value": 4, "count": 1 },
+        { "value": 5, "count": 1 }
+      ],
+      "recentTexts": []
+    },
+    {
+      "questionId": 4,
+      "type": "SHORT_TEXT",
+      "title": "의견",
+      "required": false,
+      "answeredCount": 1,
+      "average": null,
+      "optionCounts": [],
+      "valueCounts": [],
+      "recentTexts": [ "친절했습니다" ]
+    }
+  ]
+}
+```
+
+**`completionRate` 는 응답 1건당 "답한 질문 수 / 전체 질문 수" 의 평균**입니다. 위 예시는 질문 4개에 응답 3건(4문항·2문항·2문항 응답)이라 `(4+2+2) / (3×4) = 0.667` 입니다.
+
+- **필수 문항만 보지 않는 이유**: 필수 문항은 미응답이면 애초에 제출이 거부되므로(400), 필수만 세면 완료율이 언제나 1.0 입니다. 전체 문항 대비로 재야 "선택 문항을 얼마나 건너뛰었는가"라는 실제 정보가 남습니다.
+- **계산 방식**: 응답마다 비율을 구해 평균 내지 않고, 답한 (응답, 질문) 쌍의 총수를 `총 응답 수 × 전체 질문 수` 로 나눕니다. 값은 같으면서 질의가 한 번이고, 답변 행이 하나도 없는 응답도 분모에 남아 0 으로 반영됩니다. 이때 체크박스가 같은 쌍에 여러 행을 만들므로 중복을 제거해야 합니다 — 빠뜨리면 완료율이 1.0 을 넘습니다.
+- 질문이 없거나 응답이 없으면 `0.0` 입니다(0 으로 나누지 않습니다).
+
+**`responsesByDate` 는 발행일부터 종료일(종료 전이면 오늘)까지 하루도 빠짐없이** 이어집니다. 응답이 없던 날도 `count: 0` 으로 채워, 차트가 빈 날을 건너뛰어 그려지지 않게 합니다. 발행 전(`DRAFT`) 폼은 응답을 받을 수 있던 날이 하루도 없으므로 빈 배열입니다. 구간의 기준이 되는 발행·종료 시각은 감사 컬럼이 아니라 별도 컬럼(`forms.published_at`·`closed_at`)에 기록합니다 — `updatedAt` 은 이후 제목 수정에도 갱신되어 발행 시각의 근거가 될 수 없습니다.
+
+**`questionSummaries` 는 타입마다 의미 있는 통계만 채웁니다.** 다만 목록형 필드는 해당 없을 때도 `null` 이 아니라 **빈 배열**이라, 화면이 방어 코드 없이 순회할 수 있습니다.
+
+| 타입 | 채워지는 필드 |
+|---|---|
+| 선택형 | `optionCounts` — 선택지별 선택 수 |
+| RATING · NUMBER | `average` 와 `valueCounts` — 값별 개수 |
+| SHORT_TEXT · LONG_TEXT | `recentTexts` — 최근 응답 최대 5건 |
+| DATE · TIME | `answeredCount` 만 |
+
+- **아무도 고르지 않은 선택지도 0 으로 남깁니다**(위 예시의 "불만족"). 집계 결과에는 그 선택지의 행이 아예 없어 그대로 내려보내면 차트에서 통째로 사라지고, 마치 선택지가 없었던 것처럼 보입니다. 응답이 0 인 것과 선택지가 없는 것은 다른 사실입니다.
+- **평점 평균은 값별 개수로부터 계산**합니다(값×개수의 합 ÷ 개수의 합). 평균만 내려보내면 1점과 5점으로 갈린 양극화가 "3점짜리 폼"으로 뭉개지므로 분포를 함께 담습니다.
+- **텍스트형은 최근 5건만** 담습니다. 전문은 응답 상세에서 확인합니다 — 응답이 수천 건이면 집계 응답 하나에 텍스트를 모두 실을 수 없습니다.
+
 ## 인증 필요/불필요 요약
 
 - 🔓 **불필요**: `/api/auth/register`, `/api/auth/login`, `/api/public/**`, Swagger UI 및 OpenAPI 문서
 - 🔒 **필요**: 그 외 전부 (`/api/auth/me`, `/api/forms/**`)
-- 🔒 중 **소유자만**: 폼·질문 — 소유자가 아니면 403
+- 🔒 중 **소유자만**: 폼·질문·응답·집계 — 소유자가 아니면 403
 
 인증은 **무상태 JWT** 입니다. 서버가 세션을 들고 있지 않으므로 요청마다 `Authorization` 헤더로 주체를 판별하며, 공개 응답 경로는 이 헤더 없이 동작합니다. `/api/public/**` 전체를 익명 허용으로 두어도 안전한 이유는, 이 경로가 다루는 리소스가 **발행된 폼과 그 폼에 대한 신규 응답뿐**이기 때문입니다. 수집된 응답을 읽는 경로는 공개 경로에 두지 않습니다.
 

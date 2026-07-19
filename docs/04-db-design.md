@@ -29,6 +29,8 @@ erDiagram
         varchar description
         varchar status "NOT NULL (DRAFT/PUBLISHED/CLOSED)"
         varchar slug UK "NOT NULL"
+        timestamp published_at "NULL 허용 (발행 시각)"
+        timestamp closed_at "NULL 허용 (종료 시각)"
         varchar created_by "NOT NULL"
         timestamp created_at "NOT NULL"
         varchar updated_by "NOT NULL"
@@ -91,10 +93,16 @@ erDiagram
 | description | VARCHAR(1000) | NULL | |
 | status | VARCHAR(20) | NOT NULL | DRAFT / PUBLISHED / CLOSED |
 | slug | VARCHAR(64) | NOT NULL, UNIQUE | 공개 링크 식별자 |
+| published_at | TIMESTAMP | NULL | 발행 시각 (미발행이면 NULL) |
+| closed_at | TIMESTAMP | NULL | 종료 시각 (미종료면 NULL) |
 | created_by | VARCHAR(100) | NOT NULL | 제작자 이메일 (`user_id` 소유자와 동일) |
 | created_at | TIMESTAMP | NOT NULL | |
 | updated_by | VARCHAR(100) | NOT NULL | 최종 수정자 이메일 |
 | updated_at | TIMESTAMP | NOT NULL | |
+
+`published_at`·`closed_at` 은 감사 컬럼과 별개의 **도메인 사실**입니다. 대시보드의 일별 응답 추이가 "발행일부터 종료일까지"의 구간을 그려야 하는데, `updated_at` 은 이후 제목 수정에도 갱신되어 발행 시각의 근거가 될 수 없고 `created_at` 을 쓰면 아직 응답을 받을 수 없던 작성 기간까지 차트에 들어갑니다. 즉 이 두 컬럼은 "언제 수정되었는가"(감사)가 아니라 "언제 그 사건이 일어났는가"(도메인)를 답합니다.
+
+NULL 을 허용하는 이유는 아직 일어나지 않은 사건을 NULL 로 표현하는 것이 정확하기 때문입니다. 상태 전이가 단방향·1회성이므로(`DRAFT → PUBLISHED → CLOSED`) 각 컬럼은 한 번만 채워지고 이후 바뀌지 않습니다. 값의 기록은 상태 전이와 같은 지점(엔티티의 `changeStatus`)에서 이루어져, 상태와 시각이 어긋날 수 없습니다.
 
 ### questions — 질문
 | 컬럼 | 타입 | 제약 | 설명 |
@@ -279,6 +287,9 @@ erDiagram
 - DDL 은 `src/main/resources/db/migration/V1__init.sql` 등 Flyway 스크립트를 **단일 진실 원천**으로 삼습니다.
 - 이 문서의 테이블 정의서와 Flyway 스크립트, JPA 엔티티가 3자 일치하도록 유지합니다(정합성). `spring.jpa.hibernate.ddl-auto=validate` 이므로 엔티티가 스키마와 어긋나면 기동 시점에 실패합니다.
 - 운영/개발은 PostgreSQL, 테스트는 H2(PostgreSQL 호환 모드)를 사용하며 **동일한 스크립트**를 실행합니다. 따라서 DDL 은 두 DB 에서 모두 동작하는 이식 가능한 문법만 사용합니다(PostgreSQL 전용 문법 금지).
+- 적용된 스크립트는 `V1__init.sql`(초기 스키마), `V2__api_call_logs.sql`(API 호출 이력), `V3__form_lifecycle_timestamps.sql`(`forms.published_at`·`closed_at`)입니다.
+
+이식성 규칙은 DDL 뿐 아니라 **집계 질의**에도 적용됩니다. 실제로 대시보드 집계를 구현하며 세 번 걸렸습니다 — 별칭 `day`·`value` 가 H2 에서 예약어라 문법 오류가 났고(PostgreSQL 에서는 통과합니다), 날짜 집계는 H2 가 `LocalDate` 를 PostgreSQL 드라이버가 `java.sql.Date` 를 돌려주어 결과 투영이 실패했습니다. 앞의 둘은 별칭을 바꿔, 뒤의 하나는 네이티브 질의를 JPQL 로 바꿔 방언 차이를 Hibernate 가 흡수하게 해결했습니다. 두 DB 에서 같은 스크립트·같은 질의를 돌린다는 원칙이 없었다면 운영에서야 드러났을 문제들입니다.
 
 ## 관련 문서
 - [01. 서비스 개요](01-service-overview.md)
