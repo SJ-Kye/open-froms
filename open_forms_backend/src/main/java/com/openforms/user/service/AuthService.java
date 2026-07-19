@@ -1,0 +1,47 @@
+package com.openforms.user.service;
+
+import com.openforms.common.security.JwtTokenProvider;
+import com.openforms.user.dto.LoginRequest;
+import com.openforms.user.dto.RegisterRequest;
+import com.openforms.user.dto.TokenResponse;
+import com.openforms.user.dto.UserResponse;
+import com.openforms.user.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * 인증 규칙의 단일 지점입니다(회원가입·로그인·본인 조회). 소유권/상태 전이 같은 비즈니스 규칙은 서비스에만
+ * 두고, 컨트롤러는 HTTP 매핑만 담당합니다.
+ */
+@Service
+@Transactional(readOnly = true)
+public class AuthService {
+
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
+
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
+            JwtTokenProvider jwtTokenProvider) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtTokenProvider = jwtTokenProvider;
+    }
+
+    /** 이메일 중복이면 409, 아니면 비밀번호를 해싱해 저장하고 표현을 반환합니다. */
+    @Transactional
+    public UserResponse register(RegisterRequest request) {
+        throw new UnsupportedOperationException("아직 구현되지 않았습니다.");
+    }
+
+    /** 자격이 일치하면 액세스 토큰을 발급합니다. 불일치는 401(사용자 존재 여부 미노출). */
+    public TokenResponse login(LoginRequest request) {
+        throw new UnsupportedOperationException("아직 구현되지 않았습니다.");
+    }
+
+    /** 인증 주체(이메일)에 해당하는 사용자 표현을 반환합니다. */
+    public UserResponse me(String email) {
+        throw new UnsupportedOperationException("아직 구현되지 않았습니다.");
+    }
+}
