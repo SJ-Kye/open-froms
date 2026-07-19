@@ -84,7 +84,7 @@ class ApiContractConsistencyTest {
         assertThat(documented)
                 .as("문서에는 있으나 구현되지 않은 엔드포인트 (계획을 커밋 트리에 남기지 않는다)")
                 .containsExactlyInAnyOrderElementsOf(implemented);
-        assertThat(documented).as("대조된 엔드포인트 수").hasSize(18);
+        assertThat(documented).as("대조된 엔드포인트 수").hasSize(20);
     }
 
     @Test

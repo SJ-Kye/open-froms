@@ -1,5 +1,6 @@
 package com.openforms.user.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -7,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.openforms.common.security.JwtTokenProvider;
 import com.openforms.user.dto.LoginRequest;
+import com.openforms.user.dto.RefreshRequest;
 import com.openforms.user.dto.RegisterRequest;
 import com.openforms.user.dto.TokenResponse;
 import com.openforms.user.repository.UserRepository;
@@ -17,6 +19,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
@@ -89,8 +92,80 @@ class AuthControllerTest {
                         .content(json(new LoginRequest("creator@example.com", "password1234"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.refreshToken").isNotEmpty())
                 .andExpect(jsonPath("$.tokenType").value("Bearer"))
                 .andExpect(jsonPath("$.expiresIn").isNumber());
+    }
+
+    @Test
+    @DisplayName("리프레시 → 200 + 액세스·리프레시 모두 새 값 (익명 허용)")
+    void refreshRotatesBothTokens() throws Exception {
+        register("creator@example.com", "password1234", "제작자");
+        TokenResponse issued = loginTokens("creator@example.com", "password1234");
+
+        String body = mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new RefreshRequest(issued.refreshToken()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        TokenResponse rotated = objectMapper.readValue(body, TokenResponse.class);
+        // 리프레시를 재사용하면 회전이 무의미하므로 둘 다 새 값이어야 합니다.
+        assertThat(rotated.refreshToken()).isNotEqualTo(issued.refreshToken());
+        assertThat(rotated.accessToken()).isNotBlank();
+    }
+
+    @Test
+    @DisplayName("이미 회전된 리프레시 토큰 재사용 → 401 INVALID_REFRESH_TOKEN")
+    void refreshWithRotatedTokenFails() throws Exception {
+        register("creator@example.com", "password1234", "제작자");
+        TokenResponse issued = loginTokens("creator@example.com", "password1234");
+        refresh(issued.refreshToken()).andExpect(status().isOk());
+
+        refresh(issued.refreshToken())
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_REFRESH_TOKEN"));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 리프레시 토큰 → 401(없음·폐기를 구분하지 않음)")
+    void refreshWithUnknownTokenFails() throws Exception {
+        refresh("not-a-real-token")
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_REFRESH_TOKEN"));
+    }
+
+    @Test
+    @DisplayName("빈 리프레시 토큰 → 400 VALIDATION_FAILED")
+    void refreshWithBlankTokenFails() throws Exception {
+        refresh("  ")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+    }
+
+    @Test
+    @DisplayName("로그아웃 → 204, 이후 그 토큰으로 리프레시하면 401")
+    void logoutRevokesRefreshToken() throws Exception {
+        register("creator@example.com", "password1234", "제작자");
+        TokenResponse issued = loginTokens("creator@example.com", "password1234");
+
+        mockMvc.perform(post("/api/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new RefreshRequest(issued.refreshToken()))))
+                .andExpect(status().isNoContent());
+
+        refresh(issued.refreshToken())
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_REFRESH_TOKEN"));
+    }
+
+    @Test
+    @DisplayName("이미 무효한 토큰으로 로그아웃해도 204 (멱등 — 존재 여부를 노출하지 않음)")
+    void logoutIsIdempotent() throws Exception {
+        mockMvc.perform(post("/api/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new RefreshRequest("already-gone"))))
+                .andExpect(status().isNoContent());
     }
 
     @Test
@@ -154,12 +229,22 @@ class AuthControllerTest {
     }
 
     private String login(String email, String password) throws Exception {
+        return loginTokens(email, password).accessToken();
+    }
+
+    private TokenResponse loginTokens(String email, String password) throws Exception {
         String body = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(new LoginRequest(email, password))))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
-        return objectMapper.readValue(body, TokenResponse.class).accessToken();
+        return objectMapper.readValue(body, TokenResponse.class);
+    }
+
+    private ResultActions refresh(String refreshToken) throws Exception {
+        return mockMvc.perform(post("/api/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(new RefreshRequest(refreshToken))));
     }
 
     private String json(Object value) {

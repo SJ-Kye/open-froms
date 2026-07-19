@@ -49,9 +49,12 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // 회원가입·로그인만 익명 허용. /api/auth/me 는 인증이 필요하므로 /api/auth/** 로
-                        // 통째로 열지 않습니다(그러면 /me 가 미인증으로 통과해 principal 이 없습니다).
-                        .requestMatchers("/api/auth/register", "/api/auth/login", "/api/public/**").permitAll()
+                        // 회원가입·로그인·토큰 갱신·로그아웃만 익명 허용. /api/auth/me 는 인증이 필요하므로
+                        // /api/auth/** 로 통째로 열지 않습니다(그러면 /me 가 미인증으로 통과해 principal 이
+                        // 없습니다). 갱신·로그아웃은 자격증명이 리프레시 토큰 자체라 액세스 토큰 인증을
+                        // 걸 수 없습니다 — 걸면 액세스 토큰이 만료된 뒤에는 갱신 자체가 불가능해집니다.
+                        .requestMatchers("/api/auth/register", "/api/auth/login",
+                                "/api/auth/refresh", "/api/auth/logout", "/api/public/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/error", "/favicon.ico").permitAll()
                         .anyRequest().authenticated())
