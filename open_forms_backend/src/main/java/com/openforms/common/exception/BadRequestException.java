@@ -1,5 +1,6 @@
 package com.openforms.common.exception;
 
+import java.util.List;
 import org.springframework.http.HttpStatus;
 
 /**
@@ -12,5 +13,10 @@ public class BadRequestException extends BusinessException {
 
     public BadRequestException(String code, String message) {
         super(HttpStatus.BAD_REQUEST, code, message);
+    }
+
+    /** 어떤 항목이 왜 잘못됐는지까지 전달합니다(예: 필수 응답이 빠진 질문마다 한 줄). */
+    public BadRequestException(String code, String message, List<ErrorResponse.FieldError> fieldErrors) {
+        super(HttpStatus.BAD_REQUEST, code, message, fieldErrors);
     }
 }

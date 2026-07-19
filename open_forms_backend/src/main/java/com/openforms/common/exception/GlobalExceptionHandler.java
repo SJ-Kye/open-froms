@@ -52,10 +52,13 @@ public class GlobalExceptionHandler {
                 List.of());
     }
 
-    /** 도메인 규칙 위반 → 예외가 지닌 상태/코드로 변환(404·409 등). */
+    /**
+     * 도메인 규칙 위반 → 예외가 지닌 상태/코드로 변환(404·409 등). 예외가 항목별 사유를 담고 있으면
+     * {@code @Valid} 실패와 동일한 {@code fieldErrors} 포맷으로 함께 내려줍니다.
+     */
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusiness(BusinessException ex, HttpServletRequest request) {
-        return build(ex.getStatus(), ex.getCode(), ex.getMessage(), request, List.of());
+        return build(ex.getStatus(), ex.getCode(), ex.getMessage(), request, ex.getFieldErrors());
     }
 
     /** 서비스/컨트롤러가 던진 인가 실패(비소유자) → 403. */

@@ -1,5 +1,6 @@
 package com.openforms.common.exception;
 
+import java.util.List;
 import org.springframework.http.HttpStatus;
 
 /**
@@ -13,11 +14,22 @@ public abstract class BusinessException extends RuntimeException {
 
     private final HttpStatus status;
     private final String code;
+    private final List<ErrorResponse.FieldError> fieldErrors;
 
     protected BusinessException(HttpStatus status, String code, String message) {
+        this(status, code, message, List.of());
+    }
+
+    /**
+     * 어떤 항목이 왜 잘못됐는지까지 알려야 할 때 사용합니다(예: 필수 응답이 빠진 질문 목록).
+     * {@code @Valid} 실패가 아니어도 동일한 {@code fieldErrors} 포맷으로 답할 수 있게 합니다.
+     */
+    protected BusinessException(HttpStatus status, String code, String message,
+            List<ErrorResponse.FieldError> fieldErrors) {
         super(message);
         this.status = status;
         this.code = code;
+        this.fieldErrors = List.copyOf(fieldErrors);
     }
 
     public HttpStatus getStatus() {
@@ -26,5 +38,9 @@ public abstract class BusinessException extends RuntimeException {
 
     public String getCode() {
         return code;
+    }
+
+    public List<ErrorResponse.FieldError> getFieldErrors() {
+        return fieldErrors;
     }
 }
