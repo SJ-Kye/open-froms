@@ -161,6 +161,55 @@ class FormControllerTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    @DisplayName("쓰기 동작(수정·상태 변경·삭제)도 타인이면 전부 403")
+    void writeVerbsRejectNonOwner() throws Exception {
+        String owner = registerAndLogin("owner@example.com", "소유자");
+        String other = registerAndLogin("other@example.com", "타인");
+        Long id = createForm(owner, "내 폼", "설명");
+
+        // 조회만 막고 쓰기를 빠뜨리는 실수를 막기 위해 세 동사를 모두 고정합니다.
+        mockMvc.perform(put("/api/forms/" + id).header("Authorization", "Bearer " + other)
+                        .contentType(MediaType.APPLICATION_JSON).content(json(body("가로채기", "설명"))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+
+        mockMvc.perform(patch("/api/forms/" + id + "/status").header("Authorization", "Bearer " + other)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"PUBLISHED\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+
+        mockMvc.perform(delete("/api/forms/" + id).header("Authorization", "Bearer " + other))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+
+        // 403 을 받은 뒤에도 원본이 그대로여야 합니다(부분 적용 없음).
+        mockMvc.perform(get("/api/forms/" + id).header("Authorization", "Bearer " + owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("내 폼"))
+                .andExpect(jsonPath("$.status").value("DRAFT"));
+    }
+
+    @Test
+    @DisplayName("쓰기 동작이 없는 폼을 가리키면 전부 404 FORM_NOT_FOUND")
+    void writeVerbsRejectMissingForm() throws Exception {
+        String token = registerAndLogin("owner@example.com", "제작자");
+
+        mockMvc.perform(put("/api/forms/99999999").header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content(json(body("제목", "설명"))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("FORM_NOT_FOUND"));
+
+        mockMvc.perform(patch("/api/forms/99999999/status").header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"PUBLISHED\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("FORM_NOT_FOUND"));
+
+        mockMvc.perform(delete("/api/forms/99999999").header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("FORM_NOT_FOUND"));
+    }
+
     // --- helpers ---
 
     private String registerAndLogin(String email, String name) throws Exception {

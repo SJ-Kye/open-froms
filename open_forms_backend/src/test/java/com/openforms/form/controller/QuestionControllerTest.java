@@ -216,6 +216,36 @@ class QuestionControllerTest {
                 .andExpect(jsonPath("$.questions").isEmpty());
     }
 
+    @Test
+    @DisplayName("질문 삭제 실패 경로: 타인 403 · 다른 폼의 질문 404 · 발행 폼 409")
+    void deleteQuestionFailures() throws Exception {
+        String owner = registerAndLogin("owner@example.com", "소유자");
+        String other = registerAndLogin("other@example.com", "타인");
+        Long formId = createForm(owner, "설문");
+        Long questionId = createQuestion(owner, formId, new QuestionRequest(QuestionType.SHORT_TEXT,
+                "질문", true, 1, null, null, null));
+
+        mockMvc.perform(delete("/api/forms/" + formId + "/questions/" + questionId)
+                        .header("Authorization", "Bearer " + other))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+
+        mockMvc.perform(delete("/api/forms/" + formId + "/questions/99999999")
+                        .header("Authorization", "Bearer " + owner))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("QUESTION_NOT_FOUND"));
+
+        // 발행 후에는 이미 수집된 응답과 어긋나므로 삭제도 막힙니다(추가·수정과 같은 규칙).
+        changeStatus(owner, formId, "PUBLISHED");
+        mockMvc.perform(delete("/api/forms/" + formId + "/questions/" + questionId)
+                        .header("Authorization", "Bearer " + owner))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("FORM_NOT_EDITABLE"));
+
+        mockMvc.perform(get("/api/forms/" + formId).header("Authorization", "Bearer " + owner))
+                .andExpect(jsonPath("$.questions.length()").value(1));
+    }
+
     // --- helpers ---
 
     private String registerAndLogin(String email, String name) throws Exception {

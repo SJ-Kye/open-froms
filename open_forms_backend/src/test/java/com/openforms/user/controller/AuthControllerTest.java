@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.openforms.user.dto.LoginRequest;
 import com.openforms.user.dto.RegisterRequest;
 import com.openforms.user.dto.TokenResponse;
+import com.openforms.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,8 @@ class AuthControllerTest {
     private MockMvc mockMvc;
     @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private UserRepository userRepository;
 
     @Test
     @DisplayName("회원가입 성공 → 201 + 사용자 표현(비밀번호 해시 미포함)")
@@ -117,6 +120,22 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("creator@example.com"))
                 .andExpect(jsonPath("$.name").value("제작자"));
+    }
+
+    @Test
+    @DisplayName("토큰은 유효하나 주체가 사라짐 → 404 USER_NOT_FOUND")
+    void meWithTokenOfDeletedUser() throws Exception {
+        register("ghost@example.com", "password1234", "탈퇴자");
+        String token = login("ghost@example.com", "password1234");
+
+        // 무상태 JWT 는 발급 후 서버가 폐기할 수 없으므로, 사용자가 사라져도 토큰 자체는 계속 유효합니다.
+        // 즉 "인증은 통과했으나 주체가 없는" 상태가 실제로 존재하며, 401 이 아니라 404 로 답합니다.
+        userRepository.delete(userRepository.findByEmail("ghost@example.com").orElseThrow());
+        userRepository.flush();
+
+        mockMvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"));
     }
 
     // --- helpers ---

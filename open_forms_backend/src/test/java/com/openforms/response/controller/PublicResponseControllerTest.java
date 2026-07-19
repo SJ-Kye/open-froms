@@ -160,6 +160,63 @@ class PublicResponseControllerTest {
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
     }
 
+    @Test
+    @DisplayName("이 폼에 없는 질문 id → 400 UNKNOWN_QUESTION")
+    void unknownQuestion() throws Exception {
+        String token = registerAndLogin("owner@example.com");
+        Long formId = createForm(token, "설문");
+        createQuestion(token, formId,
+                new QuestionRequest(QuestionType.SHORT_TEXT, "의견", false, 1, null, null, null));
+        String slug = slugOf(token, formId);
+        changeStatus(token, formId, "PUBLISHED");
+
+        mockMvc.perform(post("/api/public/forms/" + slug + "/responses")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new SubmitResponseRequest(List.of(
+                                new AnswerRequest(99999999L, null, "엉뚱한 질문", null, null, null))))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("UNKNOWN_QUESTION"));
+    }
+
+    @Test
+    @DisplayName("같은 질문에 두 번 응답 → 400 DUPLICATE_ANSWER")
+    void duplicateAnswer() throws Exception {
+        String token = registerAndLogin("owner@example.com");
+        Long formId = createForm(token, "설문");
+        Long questionId = createQuestion(token, formId,
+                new QuestionRequest(QuestionType.SHORT_TEXT, "의견", false, 1, null, null, null));
+        String slug = slugOf(token, formId);
+        changeStatus(token, formId, "PUBLISHED");
+
+        mockMvc.perform(post("/api/public/forms/" + slug + "/responses")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new SubmitResponseRequest(List.of(
+                                new AnswerRequest(questionId, null, "첫 번째", null, null, null),
+                                new AnswerRequest(questionId, null, "두 번째", null, null, null))))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("DUPLICATE_ANSWER"));
+    }
+
+    @Test
+    @DisplayName("택1 질문에 선택지 2개 → 400 INVALID_ANSWER_VALUE")
+    void invalidAnswerValue() throws Exception {
+        String token = registerAndLogin("owner@example.com");
+        Long formId = createForm(token, "설문");
+        Long choiceId = createQuestion(token, formId, new QuestionRequest(QuestionType.SINGLE_CHOICE,
+                "하나만 고르세요", true, 1, null, null,
+                List.of(new OptionRequest("가", 1), new OptionRequest("나", 2))));
+        List<Long> optionIds = optionIdsOf(token, formId, choiceId);
+        String slug = slugOf(token, formId);
+        changeStatus(token, formId, "PUBLISHED");
+
+        mockMvc.perform(post("/api/public/forms/" + slug + "/responses")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new SubmitResponseRequest(List.of(
+                                new AnswerRequest(choiceId, optionIds, null, null, null, null))))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_ANSWER_VALUE"));
+    }
+
     // --- helpers ---
 
     private String registerAndLogin(String email) throws Exception {
