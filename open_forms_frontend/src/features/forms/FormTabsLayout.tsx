@@ -1,0 +1,141 @@
+import { useState } from 'react'
+import { Link, NavLink, Outlet, useParams } from 'react-router-dom'
+import { ArrowLeft, BarChart3, Inbox, Pencil, Send, Square } from 'lucide-react'
+import ConfirmDialog from '../../components/ConfirmDialog'
+import ErrorBanner from '../../components/ErrorBanner'
+import Spinner from '../../components/Spinner'
+import { toApiError } from '../../lib/apiError'
+import type { FormStatus } from '../../types/api'
+import StatusBadge from './StatusBadge'
+import { nextStatus } from './formStatus'
+import { useChangeStatusMutation, useFormQuery } from './useForms'
+import styles from './FormTabsLayout.module.css'
+
+/**
+ * 폼 하나를 다루는 세 화면(편집·응답·집계)의 공통 골격입니다. 제목·상태·상태 전이 버튼은 어느
+ * 탭에서나 같은 자리에 있어야 하므로 여기에 둡니다.
+ *
+ * <p>탭을 컴포넌트 상태가 아니라 **경로**로 두었습니다. 그래야 새로고침·뒤로가기·링크 공유가
+ * 그대로 동작하고, 집계 조회가 편집 화면에 들어갈 때마다 따라붙지 않습니다.
+ *
+ * <p>제목을 위해 폼 상세를 다시 조회하지만 자식 화면과 **같은 쿼리 키**라 React Query 가 캐시를
+ * 공유합니다 — 요청은 한 번만 나갑니다.
+ */
+export default function FormTabsLayout() {
+  const { id } = useParams()
+  const formId = Number(id)
+  const { data: form, isPending, isError, error } = useFormQuery(formId)
+  const changeStatus = useChangeStatusMutation(formId)
+  const [pendingStatus, setPendingStatus] = useState<FormStatus | null>(null)
+
+  if (isPending) {
+    return <Spinner page />
+  }
+  if (isError) {
+    const apiError = toApiError(error)
+    return (
+      <div>
+        <BackLink />
+        <ErrorBanner message={apiError.message} traceId={apiError.traceId} />
+      </div>
+    )
+  }
+
+  const target = nextStatus(form.status)
+
+  return (
+    <div className="animate-fade-in">
+      <BackLink />
+
+      <div className={styles.head}>
+        <div>
+          <StatusBadge status={form.status} />
+          <h1 className={styles.title}>{form.title}</h1>
+        </div>
+        {target && (
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setPendingStatus(target)}
+            // 질문이 없는 폼을 발행하면 응답자는 빈 화면을 봅니다. 서버가 막는 규칙은 아니지만
+            // 의도한 상황일 리 없으므로 화면에서 멈춰 세웁니다.
+            disabled={target === 'PUBLISHED' && form.questions.length === 0}
+          >
+            {target === 'PUBLISHED' ? <Send size={16} /> : <Square size={16} />}
+            {target === 'PUBLISHED' ? '발행하기' : '응답 마감'}
+          </button>
+        )}
+      </div>
+
+      <nav className={styles.tabs}>
+        <Tab to={`/forms/${formId}`} end icon={<Pencil size={15} />} label="편집" />
+        <Tab to={`/forms/${formId}/responses`} icon={<Inbox size={15} />} label="응답" />
+        <Tab to={`/forms/${formId}/dashboard`} icon={<BarChart3 size={15} />} label="집계" />
+      </nav>
+
+      {changeStatus.isError && (
+        <div style={{ marginBottom: 16 }}>
+          <ErrorBanner {...toBanner(changeStatus.error)} />
+        </div>
+      )}
+
+      <Outlet />
+
+      <ConfirmDialog
+        open={pendingStatus !== null}
+        title={pendingStatus === 'PUBLISHED' ? '폼을 발행할까요?' : '응답을 마감할까요?'}
+        description={
+          pendingStatus === 'PUBLISHED'
+            ? '발행하면 공개 링크로 누구나 응답할 수 있습니다. 되돌려 작성 중으로 만들 수 없고, 발행 이후에는 질문을 수정할 수 없습니다.'
+            : '마감하면 더 이상 응답을 받지 않습니다. 되돌릴 수 없으며, 이미 모인 응답과 집계는 그대로 볼 수 있습니다.'
+        }
+        confirmLabel={pendingStatus === 'PUBLISHED' ? '발행' : '마감'}
+        danger={pendingStatus === 'CLOSED'}
+        pending={changeStatus.isPending}
+        onConfirm={() => {
+          if (pendingStatus) {
+            void changeStatus.mutateAsync(pendingStatus).then(() => setPendingStatus(null))
+          }
+        }}
+        onCancel={() => setPendingStatus(null)}
+      />
+    </div>
+  )
+}
+
+function Tab({
+  to,
+  end,
+  icon,
+  label,
+}: {
+  to: string
+  end?: boolean
+  icon: React.ReactNode
+  label: string
+}) {
+  return (
+    <NavLink
+      to={to}
+      end={end}
+      className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ''}`}
+    >
+      {icon}
+      {label}
+    </NavLink>
+  )
+}
+
+function BackLink() {
+  return (
+    <Link to="/forms" className={styles.back}>
+      <ArrowLeft size={16} />
+      폼 목록
+    </Link>
+  )
+}
+
+function toBanner(error: unknown) {
+  const apiError = toApiError(error)
+  return { message: apiError.message, traceId: apiError.traceId }
+}

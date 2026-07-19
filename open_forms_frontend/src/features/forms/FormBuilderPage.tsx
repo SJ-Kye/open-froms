@@ -1,19 +1,17 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Check, Copy, Info, ListPlus, Lock, Send, Square } from 'lucide-react'
+import { useParams } from 'react-router-dom'
+import { Check, Copy, Info, ListPlus, Lock } from 'lucide-react'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import EmptyState from '../../components/EmptyState'
 import ErrorBanner from '../../components/ErrorBanner'
 import Spinner from '../../components/Spinner'
 import { toApiError, type ApiError } from '../../lib/apiError'
-import type { FormStatus, QuestionResponse } from '../../types/api'
+import type { QuestionResponse } from '../../types/api'
 import QuestionCard from './QuestionCard'
 import QuestionEditor from './QuestionEditor'
-import StatusBadge from './StatusBadge'
 import { STATUS_LABELS, nextStatus } from './formStatus'
 import { emptyDraft, toDraft, toRequest, type QuestionDraft } from './questionDraft'
 import {
-  useChangeStatusMutation,
   useCreateQuestionMutation,
   useDeleteQuestionMutation,
   useFormQuery,
@@ -31,7 +29,6 @@ export default function FormBuilderPage() {
 
   const { data: form, isPending, isError, error } = useFormQuery(formId)
   const updateForm = useUpdateFormMutation(formId)
-  const changeStatus = useChangeStatusMutation(formId)
   const createQuestion = useCreateQuestionMutation(formId)
   const updateQuestion = useUpdateQuestionMutation(formId)
   const deleteQuestion = useDeleteQuestionMutation(formId)
@@ -41,7 +38,6 @@ export default function FormBuilderPage() {
   const [editTarget, setEditTarget] = useState<EditTarget>(null)
   const [draft, setDraft] = useState<QuestionDraft>(emptyDraft)
   const [questionError, setQuestionError] = useState<ApiError | null>(null)
-  const [pendingStatus, setPendingStatus] = useState<FormStatus | null>(null)
   const [pendingDelete, setPendingDelete] = useState<QuestionResponse | null>(null)
   const [copied, setCopied] = useState(false)
 
@@ -60,10 +56,7 @@ export default function FormBuilderPage() {
   if (isError) {
     const apiError = toApiError(error)
     return (
-      <div>
-        <BackLink />
-        <ErrorBanner message={apiError.message} traceId={apiError.traceId} />
-      </div>
+      <ErrorBanner message={apiError.message} traceId={apiError.traceId} />
     )
   }
 
@@ -131,14 +124,6 @@ export default function FormBuilderPage() {
     setPendingDelete(null)
   }
 
-  async function confirmStatus() {
-    if (!pendingStatus) {
-      return
-    }
-    await changeStatus.mutateAsync(pendingStatus)
-    setPendingStatus(null)
-  }
-
   async function copyLink() {
     await navigator.clipboard.writeText(publicUrl)
     setCopied(true)
@@ -146,31 +131,7 @@ export default function FormBuilderPage() {
   }
 
   return (
-    <div className="animate-fade-in">
-      <BackLink />
-
-      <div className={styles.head}>
-        <div>
-          <StatusBadge status={form.status} />
-          <h1 style={{ marginTop: 8 }}>{form.title}</h1>
-        </div>
-        <div className={styles.headActions}>
-          {target && (
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => setPendingStatus(target)}
-              // 질문이 없는 폼을 발행하면 응답자는 빈 화면을 봅니다. 서버가 막는 규칙은 아니지만
-              // 의도한 상황일 리 없으므로 화면에서 멈춰 세웁니다.
-              disabled={target === 'PUBLISHED' && form.questions.length === 0}
-            >
-              {target === 'PUBLISHED' ? <Send size={16} /> : <Square size={16} />}
-              {target === 'PUBLISHED' ? '발행하기' : '응답 마감'}
-            </button>
-          )}
-        </div>
-      </div>
-
+    <div>
       {!questionsEditable && (
         <div className={`banner ${styles.notice}`} style={{ background: 'var(--bg-tertiary)' }}>
           <Lock size={18} style={{ flexShrink: 0 }} />
@@ -265,12 +226,6 @@ export default function FormBuilderPage() {
           <ErrorBanner {...bannerProps(deleteQuestion.error)} />
         </div>
       )}
-      {changeStatus.isError && (
-        <div style={{ marginBottom: 16 }}>
-          <ErrorBanner {...bannerProps(changeStatus.error)} />
-        </div>
-      )}
-
       <div className={styles.questions}>
         {form.questions.length === 0 && editTarget === null && (
           <div className="card">
@@ -338,31 +293,7 @@ export default function FormBuilderPage() {
         onCancel={() => setPendingDelete(null)}
       />
 
-      <ConfirmDialog
-        open={pendingStatus !== null}
-        title={pendingStatus === 'PUBLISHED' ? '폼을 발행할까요?' : '응답을 마감할까요?'}
-        description={
-          pendingStatus === 'PUBLISHED'
-            ? '발행하면 공개 링크로 누구나 응답할 수 있습니다. 되돌려 작성 중으로 만들 수 없고, 발행 이후에는 질문을 수정할 수 없습니다.'
-            : '마감하면 더 이상 응답을 받지 않습니다. 되돌릴 수 없으며, 이미 모인 응답과 집계는 그대로 볼 수 있습니다.'
-        }
-        confirmLabel={pendingStatus === 'PUBLISHED' ? '발행' : '마감'}
-        danger={pendingStatus === 'CLOSED'}
-        pending={changeStatus.isPending}
-        onConfirm={() => void confirmStatus()}
-        onCancel={() => setPendingStatus(null)}
-      />
-
     </div>
-  )
-}
-
-function BackLink() {
-  return (
-    <Link to="/forms" className={styles.back}>
-      <ArrowLeft size={16} />
-      폼 목록
-    </Link>
   )
 }
 
