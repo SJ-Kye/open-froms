@@ -29,7 +29,7 @@ docker-compose up -d        # PostgreSQL 16 기동
 cd open_forms_backend
 ./gradlew bootRun           # http://localhost:8080
 ```
-- API 문서(Swagger UI): http://localhost:80/swagger-ui.html
+- API 문서(Swagger UI): http://localhost:8080/swagger-ui.html
 - Flyway 가 기동 시 스키마를 자동으로 마이그레이션합니다.
 
 ### 4) 프론트엔드 실행
@@ -72,8 +72,8 @@ cd open_forms_backend
 | [02. 기술 스택 선택 근거](docs/02-tech-stack.md) | 프론트엔드·백엔드·DB 의 선택 이유와 대안 비교를 정리합니다. |
 | [06. AI 도구 활용 내역](docs/06-ai-usage.md) | 어떤 도구로 무엇을 했고, AI 생성물 중 직접 수정한 부분과 이유를 기록합니다. |
 | [03. 시스템 구성도](docs/03-architecture.md) | 컴포넌트 구성도와 요청 흐름 *(작성 중)* |
-| [04. DB 설계](docs/04-db-design.md) | ERD·테이블 정의서·인덱스 설계 근거 *(작성 중)* |
-| [05. API 설계](docs/05-api-design.md) | 엔드포인트 목록과 요청/응답 예시 *(작성 중)* |
+| [04. DB 설계](docs/04-db-design.md) | ERD·테이블 정의서·인덱스 설계 근거 |
+| [05. API 설계](docs/05-api-design.md) | 엔드포인트 목록과 요청/응답 예시 |
 | [07. 미완성 / 개선점](docs/07-limitations.md) | 현재 한계와 개선 계획 *(작성 중)* |
 
-> 03·04·05·07 은 섹션 구조만 잡힌 상태이며, 해당 기능이 구현·확정되는 시점에 내용을 채웁니다.
+> 03·07 은 섹션 구조만 잡힌 상태이며, 해당 기능이 구현·확정되는 시점에 내용을 채웁니다.
