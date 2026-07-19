@@ -109,6 +109,12 @@
 **T20. 런타임 실측 교차검증 — Claude Code**
 - 일회용 PostgreSQL 16 컨테이너로 register→login→`/me` 전 흐름을 curl 로 재현하고 DB 를 직접 조회해, (1) `users.password_hash` 가 BCrypt(`$2a$`)로 저장(원문 아님), (2) 인증 요청의 `api_call_logs.principal` 이 **실제 로그인 이메일**로 기록됨을 확인했습니다. **교훈**: 비동기 이력 기록의 주체 캡처는 단위 테스트로 덮이지 않아 실측이 필요합니다.
 
+### [Phase 1 마무리] OpenAPI(springdoc) 설정 — Claude Code
+
+**T21. 보안 표기를 전역 대신 오퍼레이션별로 — Claude Code (설계 판단)**
+- `OpenApiConfig` 에 API 메타데이터와 JWT `bearerAuth` 보안 스킴(HTTP/bearer/JWT)을 정의해 Swagger UI 의 Authorize 버튼으로 보호 API 를 시험할 수 있게 했습니다.
+- **전역 `SecurityRequirement` 를 두지 않고**, 인증이 필요한 오퍼레이션(`/api/auth/me`)에만 `@SecurityRequirement` 를 붙였습니다. **이유**: 전역으로 걸면 `register`·`login`·`/api/public/**` 같은 익명 경로까지 잠금으로 잘못 표기됩니다. 실측(`GET /v3/api-docs`)으로 `/me` 에만 `security:[{bearerAuth}]` 가 붙고 register/login 은 비어 있음을 확인해 05 문서의 🔒/🔓 표기와 일치시켰습니다.
+
 <!-- 이후 Phase 3~9 진행 시 여기에 계속 추가 -->
 
 ## 수정 이유 분류 (누적)
@@ -118,4 +124,4 @@
 | 최신성/정합 | Boot 3.x(구 지식) → 실측 4.1.0, 프론트 버전 추정치 → 실측치 |
 | 재현성 개선 | foojay toolchain 자동 프로비저닝 추가 |
 | 호환성 확인 | springdoc 3.0.3(Boot 4 호환 라인) 고정 |
-| 설계 판단 | 감사 컬럼 선택 적용; 체크박스=MULTIPLE_CHOICE 재사용; answer_options 제거; users 만 UUID 혼합 전략; 에러만 래퍼+traceId 헤더; api_call_logs 주체 VARCHAR(모듈 경계); Security 무상태만 common; 로그인 실패 401 통일(계정 열거 차단); UserDetailsService 미도입 |
+| 설계 판단 | 감사 컬럼 선택 적용; 체크박스=MULTIPLE_CHOICE 재사용; answer_options 제거; users 만 UUID 혼합 전략; 에러만 래퍼+traceId 헤더; api_call_logs 주체 VARCHAR(모듈 경계); Security 무상태만 common; 로그인 실패 401 통일(계정 열거 차단); UserDetailsService 미도입; OpenAPI 보안 표기 오퍼레이션별(전역 미사용) |
