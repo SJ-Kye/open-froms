@@ -22,11 +22,15 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
-# JWT 설정
+# 인증 토큰 설정
 app:
   jwt:
     secret: ${JWT_SECRET:change-me-to-a-long-random-secret-at-least-32-bytes}
     expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
+  # 리프레시 토큰은 JWT 가 아니라 DB 에 상태로 존재하는 불투명 난수라 설정을 분리합니다.
+  # 액세스 토큰(1시간)이 만료되어도 이 기간 동안은 재로그인 없이 갱신할 수 있습니다.
+  refresh-token:
+    expiration-days: ${REFRESH_TOKEN_EXPIRATION_DAYS:14}
 
 # Swagger UI: /swagger-ui.html
 springdoc:

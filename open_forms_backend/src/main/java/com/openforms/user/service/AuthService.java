@@ -47,26 +47,43 @@ public class AuthService {
         return UserResponse.from(user);
     }
 
-    /** 자격이 일치하면 액세스 토큰을 발급합니다. 불일치는 401(사용자 존재 여부 미노출). */
+    /**
+     * 자격이 일치하면 액세스 토큰과 리프레시 토큰을 함께 발급합니다. 불일치는 401(사용자 존재 여부 미노출).
+     *
+     * <p>리프레시 토큰 저장이 있으므로 쓰기 트랜잭션입니다.
+     */
+    @Transactional
     public TokenResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(AuthService::invalidCredentials);
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw invalidCredentials();
         }
-        throw new UnsupportedOperationException("아직 구현되지 않았습니다.");
+        return issueTokens(refreshTokenService.issue(user));
     }
 
-    /** 리프레시 토큰을 회전시키고 새 토큰 쌍을 발급합니다. */
+    /**
+     * 리프레시 토큰을 회전시키고 새 토큰 쌍을 발급합니다.
+     *
+     * <p>액세스 토큰은 만료되었을 수 있으므로 요구하지 않습니다. 이 API 의 자격증명은 리프레시 토큰
+     * 자체이며, 유효성 판정은 {@link RefreshTokenService#rotate(String)} 가 담당합니다.
+     */
     @Transactional
     public TokenResponse refresh(RefreshRequest request) {
-        throw new UnsupportedOperationException("아직 구현되지 않았습니다.");
+        return issueTokens(refreshTokenService.rotate(request.refreshToken()));
     }
 
-    /** 제시된 리프레시 토큰을 폐기합니다(로그아웃). */
+    /** 제시된 리프레시 토큰을 폐기합니다(로그아웃). 이미 무효한 토큰이어도 성공으로 답합니다. */
     @Transactional
     public void logout(RefreshRequest request) {
-        throw new UnsupportedOperationException("아직 구현되지 않았습니다.");
+        refreshTokenService.revoke(request.refreshToken());
+    }
+
+    /** 방금 발급/회전된 리프레시 토큰의 주인에게 액세스 토큰을 붙여 응답을 만듭니다. */
+    private TokenResponse issueTokens(IssuedRefreshToken refreshToken) {
+        String accessToken = jwtTokenProvider.issue(refreshToken.user().getEmail());
+        return TokenResponse.bearer(accessToken, refreshToken.token(),
+                jwtTokenProvider.expiresInSeconds());
     }
 
     /** 인증 주체(이메일)에 해당하는 사용자 표현을 반환합니다. */

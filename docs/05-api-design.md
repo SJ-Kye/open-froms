@@ -145,6 +145,7 @@
 | `ANSWER_OUT_OF_RANGE` | 400 | 응답 값이 질문의 허용 범위 밖 |
 | `UNAUTHORIZED` | 401 | 토큰이 없거나 유효하지 않음 (필터 단계) |
 | `INVALID_CREDENTIALS` | 401 | 이메일 또는 비밀번호 불일치 |
+| `INVALID_REFRESH_TOKEN` | 401 | 리프레시 토큰이 없음·만료됨·이미 폐기됨 (셋을 구분하지 않음) |
 | `ACCESS_DENIED` | 403 | 소유자가 아닌 리소스 접근 |
 | `FORM_NOT_FOUND` | 404 | 폼 없음 (공개 경로에서는 미발행 폼 포함) |
 | `QUESTION_NOT_FOUND` | 404 | 해당 폼에 그 질문이 없음 |

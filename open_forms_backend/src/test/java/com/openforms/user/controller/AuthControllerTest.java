@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.openforms.common.security.JwtTokenProvider;
 import com.openforms.user.dto.LoginRequest;
 import com.openforms.user.dto.RegisterRequest;
 import com.openforms.user.dto.TokenResponse;
@@ -35,6 +36,8 @@ class AuthControllerTest {
     private ObjectMapper objectMapper;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
 
     @Test
     @DisplayName("회원가입 성공 → 201 + 사용자 표현(비밀번호 해시 미포함)")
@@ -126,7 +129,10 @@ class AuthControllerTest {
     @DisplayName("토큰은 유효하나 주체가 사라짐 → 404 USER_NOT_FOUND")
     void meWithTokenOfDeletedUser() throws Exception {
         register("ghost@example.com", "password1234", "탈퇴자");
-        String token = login("ghost@example.com", "password1234");
+        // 로그인 대신 액세스 토큰을 직접 발급합니다. 로그인은 리프레시 토큰까지 저장하는데, 같은
+        // 트랜잭션에서 그 주인을 지우면 영속성 컨텍스트가 먼저 걸려 검증하려는 상황(토큰만 살아남음)에
+        // 도달하지 못합니다. 여기서 보려는 것은 액세스 토큰의 무상태성이므로 그 부분만 만듭니다.
+        String token = jwtTokenProvider.issue("ghost@example.com");
 
         // 무상태 JWT 는 발급 후 서버가 폐기할 수 없으므로, 사용자가 사라져도 토큰 자체는 계속 유효합니다.
         // 즉 "인증은 통과했으나 주체가 없는" 상태가 실제로 존재하며, 401 이 아니라 404 로 답합니다.

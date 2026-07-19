@@ -20,3 +20,5 @@ app:
   jwt:
     secret: test-secret-key-that-is-at-least-32-bytes-long-000
     expiration-seconds: 3600
+  refresh-token:
+    expiration-days: 14
