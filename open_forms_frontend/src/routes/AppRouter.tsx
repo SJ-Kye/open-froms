@@ -2,7 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import AppShell from '../components/AppShell'
 import LoginPage from '../features/auth/LoginPage'
 import RegisterPage from '../features/auth/RegisterPage'
-import FormsPlaceholderPage from '../pages/FormsPlaceholderPage'
+import FormsListPage from '../features/forms/FormsListPage'
 import NotFoundPage from '../pages/NotFoundPage'
 import PublicFormPlaceholderPage from '../pages/PublicFormPlaceholderPage'
 import AnonymousOnlyRoute from './AnonymousOnlyRoute'
@@ -30,7 +30,7 @@ export default function AppRouter() {
       {/* 제작자 전용 */}
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
-          <Route path="/forms" element={<FormsPlaceholderPage />} />
+          <Route path="/forms" element={<FormsListPage />} />
         </Route>
       </Route>
 
