@@ -40,7 +40,7 @@ export default function ResponsesPage() {
     return (
       <div className="card">
         {/*
-          "아직 응답이 없음"과 "받을 수 없는 상태"는 다릅니다. 발행 전 폼은 링크 자체가 열리지
+          "아직 응답이 없음"과 "받을 수 없는 상태"는 다릅니다. 발행 전 설문지는 링크 자체가 열리지
           않으므로 응답이 0인 것이 당연하고, 사용자가 할 일은 기다리기가 아니라 발행하기입니다.
         */}
         <EmptyState

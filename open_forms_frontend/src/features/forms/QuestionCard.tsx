@@ -8,8 +8,8 @@ import { MIN_OPTIONS, QUESTION_TYPES, questionTypeMeta } from './questionType'
 import styles from './QuestionCard.module.css'
 
 /**
- * 질문 한 건의 카드입니다. 편집 가능한 폼(DRAFT)에서는 **모드 전환 없이 바로 편집**되고, 발행·마감된
- * 폼에서는 값만 보여 줍니다.
+ * 질문 한 건의 카드입니다. 편집 가능한 설문지(DRAFT)에서는 **모드 전환 없이 바로 편집**되고, 발행·마감된
+ * 설문지에서는 값만 보여 줍니다.
  *
  * <p>«편집» 버튼을 눌러야 고칠 수 있던 이전 구조를 없앤 이유는, 오타 하나를 고치는 데 모드 전환이
  * 필요했고 한 번에 한 문항만 열 수 있었기 때문입니다. 대신 저장은 여전히 **카드 단위**입니다 —
@@ -276,7 +276,7 @@ export default function QuestionCard({
   )
 }
 
-/** 발행·마감된 폼의 질문입니다. 서버가 409 로 막을 편집 수단을 아예 두지 않습니다. */
+/** 발행·마감된 설문지의 질문입니다. 서버가 409 로 막을 편집 수단을 아예 두지 않습니다. */
 function ReadOnlyCard({ question, index }: { question: QuestionResponse; index: number }) {
   const meta = questionTypeMeta(question.type)
 

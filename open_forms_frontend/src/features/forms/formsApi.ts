@@ -9,7 +9,7 @@ import type {
   QuestionResponse,
 } from '../../types/api'
 
-/** 폼·질문 API 호출을 한곳에 모읍니다. 경로와 본문 모양을 화면이 알 필요는 없습니다. */
+/** 설문지·질문 API 호출을 한곳에 모읍니다. 경로와 본문 모양을 화면이 알 필요는 없습니다. */
 
 export interface FormListParams {
   page: number

@@ -55,7 +55,7 @@ export default function RegisterPage() {
       <div className="card">
         <div className={styles.header}>
           <h1 className={styles.title}>회원가입</h1>
-          <p className={styles.subtitle}>계정을 만들면 폼을 만들고 응답을 모을 수 있습니다.</p>
+          <p className={styles.subtitle}>계정을 만들면 설문지를 만들고 응답을 모을 수 있습니다.</p>
         </div>
 
         {/* 필드로 특정되지 않는 실패(예: 409 이메일 중복)만 배너로 보여 줍니다. */}

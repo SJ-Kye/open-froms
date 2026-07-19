@@ -12,7 +12,7 @@ import styles from './DashboardPage.module.css'
 
 /**
  * 집계 대시보드입니다. 서버가 카드·추이·문항별 통계를 **한 번의 요청**으로 모두 내려 주므로
- * 화면이 폼 구조와 응답을 따로 조회해 맞출 일이 없습니다.
+ * 화면이 설문지 구조와 응답을 따로 조회해 맞출 일이 없습니다.
  */
 export default function DashboardPage() {
   const { id } = useParams()
@@ -37,7 +37,7 @@ export default function DashboardPage() {
           title={form?.status === 'DRAFT' ? '발행 후 집계가 시작됩니다' : '아직 집계할 응답이 없습니다'}
           description={
             form?.status === 'DRAFT'
-              ? '작성 중인 폼은 응답을 받을 수 없어 집계할 것이 없습니다.'
+              ? '작성 중인 설문지는 응답을 받을 수 없어 집계할 것이 없습니다.'
               : '공개 링크로 응답이 들어오면 이곳에 통계가 나타납니다.'
           }
         />

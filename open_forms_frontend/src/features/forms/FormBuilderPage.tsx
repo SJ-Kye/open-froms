@@ -22,7 +22,7 @@ import {
 import styles from './FormBuilderPage.module.css'
 
 /**
- * 폼 편집 화면입니다. 문항은 모드 전환 없이 **바로 편집**되고, 저장은 카드 단위입니다(서버 API 가
+ * 설문지 편집 화면입니다. 문항은 모드 전환 없이 **바로 편집**되고, 저장은 카드 단위입니다(서버 API 가
  * 문항 단위이므로 — 여러 문항을 한 번에 보내면 중간에 하나가 400 일 때 어디까지 저장됐는지
  * 알 수 없습니다).
  */
@@ -51,7 +51,7 @@ export default function FormBuilderPage() {
 
   const questions = form?.questions
 
-  // 서버 값으로 폼 정보를 채웁니다. 폼이 바뀔 때만 덮어써야 타이핑 도중 리페치가 입력을 되돌리지
+  // 서버 값으로 설문지 정보를 채웁니다. 설문지가 바뀔 때만 덮어써야 타이핑 도중 리페치가 입력을 되돌리지
   // 않습니다.
   useEffect(() => {
     if (form) {
@@ -107,7 +107,7 @@ export default function FormBuilderPage() {
   async function saveDetails() {
     try {
       await updateForm.mutateAsync({ title: title.trim(), description })
-      showToast('폼 정보를 저장했습니다.')
+      showToast('설문지 정보를 저장했습니다.')
     } catch {
       // 실패 사유는 배너로 남깁니다(토스트는 사라지므로 조치가 필요한 정보에 부적합).
     }
@@ -192,8 +192,8 @@ export default function FormBuilderPage() {
               onChange={(e) => setTitle(e.target.value)}
               disabled={updateForm.isPending}
               maxLength={255}
-              placeholder="제목 없는 폼"
-              aria-label="폼 제목"
+              placeholder="제목 없는 설문지"
+              aria-label="설문지 제목"
             />
             {/* 저장 버튼은 입력을 끝낸 시선이 바로 닿도록 카드 우상단에 둡니다. */}
             <button
@@ -216,7 +216,7 @@ export default function FormBuilderPage() {
             disabled={updateForm.isPending}
             maxLength={1000}
             placeholder="응답자에게 보여 줄 설명을 적어 주세요. (선택)"
-            aria-label="폼 설명"
+            aria-label="설문지 설명"
           />
 
           {updateForm.isError && (
@@ -309,7 +309,7 @@ export default function FormBuilderPage() {
           {!questionsEditable && form.questions.length === 0 && (
             <div className="card">
               <p className={styles.muted} style={{ padding: '20px 0', textAlign: 'center' }}>
-                질문 없이 발행된 폼입니다.
+                질문 없이 발행된 설문지입니다.
               </p>
             </div>
           )}

@@ -3,10 +3,10 @@ import type { FormStatus, QuestionRequest } from '../../types/api'
 import * as formsApi from './formsApi'
 
 /**
- * 폼 관련 서버 상태 훅입니다. 쿼리 키를 한곳에서 만들어, 무효화 대상이 흩어지지 않게 합니다.
+ * 설문지 관련 서버 상태 훅입니다. 쿼리 키를 한곳에서 만들어, 무효화 대상이 흩어지지 않게 합니다.
  *
  * <p>질문 API 는 질문 단위(POST/PUT/DELETE)라 매번 상세를 다시 받아야 화면과 서버가 일치합니다.
- * 그래서 질문 변경 뮤테이션은 모두 해당 폼 상세를 무효화합니다.
+ * 그래서 질문 변경 뮤테이션은 모두 해당 설문지 상세를 무효화합니다.
  */
 
 export const formKeys = {

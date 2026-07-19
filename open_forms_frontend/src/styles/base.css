@@ -185,7 +185,7 @@ a:hover {
   color: var(--text-primary);
 }
 
-/* ── 폼 ── */
+/* ── 입력 폼 ── */
 .form-group {
   margin-bottom: 20px;
   display: flex;

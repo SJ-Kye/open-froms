@@ -50,7 +50,7 @@ export interface PageResponse<T> {
   totalPages: number
 }
 
-/** 폼 생명주기입니다. 전이는 `DRAFT → PUBLISHED → CLOSED` 단방향이며 되돌릴 수 없습니다. */
+/** 설문지 생명주기입니다. 전이는 `DRAFT → PUBLISHED → CLOSED` 단방향이며 되돌릴 수 없습니다. */
 export type FormStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED'
 
 /**
@@ -100,7 +100,7 @@ export interface FormSummaryResponse {
   createdAt: string
 }
 
-/** 폼 상세입니다(생성·조회·수정 공용). */
+/** 설문지 상세입니다(생성·조회·수정 공용). */
 export interface FormDetailResponse {
   id: number
   title: string
@@ -132,7 +132,7 @@ export interface QuestionRequest {
 }
 
 // ── 공개(응답자용) ──────────────────────────────────────────────────────────
-// 제작자용과 별도 DTO 입니다. 폼 id·질문 position·감사 컬럼이 없고, 대신 status 가 있습니다.
+// 제작자용과 별도 DTO 입니다. 설문지 id·질문 position·감사 컬럼이 없고, 대신 status 가 있습니다.
 
 export interface PublicOptionResponse {
   id: number
@@ -151,9 +151,9 @@ export interface PublicQuestionResponse {
 }
 
 /**
- * 공개 링크로 조회한 폼입니다.
+ * 공개 링크로 조회한 설문지입니다.
  *
- * `status` 가 있는 이유는 **종료된 폼도 200 으로 열리기** 때문입니다. 화면이 이 값을 보고 입력 폼과
+ * `status` 가 있는 이유는 **종료된 설문지도 200 으로 열리기** 때문입니다. 화면이 이 값을 보고 입력 화면과
  * 마감 안내를 갈라야 합니다. 미발행(`DRAFT`)은 애초에 404 라 여기로 오지 않습니다.
  */
 export interface PublicFormResponse {
@@ -205,7 +205,7 @@ export interface SelectedOption {
 }
 
 /**
- * 응답 상세의 문항별 답변입니다. 서버가 **폼의 모든 질문**을 순서대로 담고, 답하지 않은 문항도
+ * 응답 상세의 문항별 답변입니다. 서버가 **설문지의 모든 질문**을 순서대로 담고, 답하지 않은 문항도
  * `answered: false` 로 포함합니다. 체크박스의 여러 저장 행은 여기서 하나로 묶여 옵니다.
  */
 export interface AnswerDetail {

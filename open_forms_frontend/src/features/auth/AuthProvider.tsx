@@ -20,7 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearTokens()
     setUser(null)
     setStatus('anon')
-    // 캐시를 비우지 않으면 다음 로그인 사용자가 이전 사용자의 폼 목록을 잠깐 보게 됩니다.
+    // 캐시를 비우지 않으면 다음 로그인 사용자가 이전 사용자의 설문지 목록을 잠깐 보게 됩니다.
     queryClient.clear()
   }, [queryClient])
 

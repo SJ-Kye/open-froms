@@ -54,9 +54,9 @@ export default function FormsListPage() {
   }
 
   async function handleCreate() {
-    // 제목을 먼저 묻지 않고 빈 폼을 만들어 빌더로 보냅니다. 폼 작성은 제목 하나로 끝나지 않으므로
+    // 제목을 먼저 묻지 않고 빈 설문지를 만들어 빌더로 보냅니다. 설문지 작성은 제목 하나로 끝나지 않으므로
     // 입력을 두 단계로 나누면 사용자가 같은 화면을 두 번 보게 됩니다.
-    const created = await createForm.mutateAsync({ title: '제목 없는 폼', description: '' })
+    const created = await createForm.mutateAsync({ title: '제목 없는 설문지', description: '' })
     navigate(`/forms/${created.id}`)
   }
 
@@ -66,7 +66,7 @@ export default function FormsListPage() {
     }
     await deleteForm.mutateAsync(pendingDelete.id)
     setPendingDelete(null)
-    showToast('폼을 삭제했습니다.')
+    showToast('설문지를 삭제했습니다.')
   }
 
   /**
@@ -89,8 +89,8 @@ export default function FormsListPage() {
     <div className="animate-fade-in">
       <div className={styles.header}>
         <div>
-          <h1>내 폼</h1>
-          <p className={styles.subtitle}>만든 폼을 발행하고 응답을 모아 보세요.</p>
+          <h1>내 설문지</h1>
+          <p className={styles.subtitle}>만든 설문지를 발행하고 응답을 모아 보세요.</p>
         </div>
         <button
           type="button"
@@ -99,7 +99,7 @@ export default function FormsListPage() {
           disabled={createForm.isPending}
         >
           {createForm.isPending ? <Spinner size={16} /> : <Plus size={18} />}
-          새 폼 만들기
+          새 설문지 만들기
         </button>
       </div>
 
@@ -135,25 +135,25 @@ export default function FormsListPage() {
       ) : data.content.length === 0 ? (
         <div className="card">
           {/*
-            "폼이 하나도 없음"과 "필터에 걸리는 폼이 없음"은 다른 상황입니다. 뭉뚱그리면 폼을 여러 개
-            만든 사용자가 필터를 좁혔을 때 "아직 만든 폼이 없습니다"를 보고 데이터가 사라졌다고
+            "설문지가 하나도 없음"과 "필터에 걸리는 설문지가 없음"은 다른 상황입니다. 뭉뚱그리면 설문지를 여러 개
+            만든 사용자가 필터를 좁혔을 때 "아직 만든 설문지가 없습니다"를 보고 데이터가 사라졌다고
             오해합니다.
           */}
           {filter === 'ALL' ? (
             <EmptyState
               icon={<ClipboardList size={40} />}
-              title="아직 만든 폼이 없습니다"
-              description="첫 폼을 만들어 질문을 추가하고, 링크를 공유해 응답을 받아 보세요."
+              title="아직 만든 설문지가 없습니다"
+              description="첫 설문지를 만들어 질문을 추가하고, 링크를 공유해 응답을 받아 보세요."
               action={
                 <button type="button" className="btn btn-primary" onClick={() => void handleCreate()}>
-                  <Plus size={18} />첫 폼 만들기
+                  <Plus size={18} />첫 설문지 만들기
                 </button>
               }
             />
           ) : (
             <EmptyState
               icon={<ClipboardList size={40} />}
-              title="조건에 맞는 폼이 없습니다"
+              title="조건에 맞는 설문지가 없습니다"
               description="다른 상태로 필터를 바꿔 보세요."
               action={
                 <button type="button" className="btn btn-secondary" onClick={() => changeFilter('ALL')}>
@@ -196,7 +196,7 @@ export default function FormsListPage() {
                     {/* DRAFT 가 아니면 질문을 고칠 수 없으므로(서버 409) 라벨로 미리 알립니다. */}
                     {form.status === 'DRAFT' ? '편집' : '열기'}
                   </button>
-                  {/* 발행된 폼에서 가장 자주 하는 일이 링크 공유이므로 목록에서 바로 꺼냅니다. */}
+                  {/* 발행된 설문지에서 가장 자주 하는 일이 링크 공유이므로 목록에서 바로 꺼냅니다. */}
                   {form.status !== 'DRAFT' && (
                     <button
                       type="button"
@@ -221,7 +221,7 @@ export default function FormsListPage() {
                     type="button"
                     className="btn btn-danger"
                     onClick={() => setPendingDelete(form)}
-                    aria-label="폼 삭제"
+                    aria-label="설문지 삭제"
                   >
                     <Trash2 size={15} />
                   </button>
@@ -258,7 +258,7 @@ export default function FormsListPage() {
 
       <ConfirmDialog
         open={pendingDelete !== null}
-        title="폼을 삭제할까요?"
+        title="설문지를 삭제할까요?"
         description={
           pendingDelete
             ? `"${pendingDelete.title}" 과(와) 여기에 달린 질문·응답 ${pendingDelete.responseCount}건이 함께 삭제됩니다. 되돌릴 수 없습니다.`

@@ -34,8 +34,8 @@ export function useSummaryQuery(formId: number) {
 /**
  * 응답을 삭제합니다.
  *
- * <p>목록뿐 아니라 **집계와 폼 목록까지** 무효화합니다. 응답이 하나 줄면 총 응답 수·완료율·일별
- * 추이가 모두 달라지고, 폼 목록 카드의 `responseCount` 도 옛 값이 됩니다.
+ * <p>목록뿐 아니라 **집계와 설문지 목록까지** 무효화합니다. 응답이 하나 줄면 총 응답 수·완료율·일별
+ * 추이가 모두 달라지고, 설문지 목록 카드의 `responseCount` 도 옛 값이 됩니다.
  */
 export function useDeleteResponseMutation(formId: number) {
   const queryClient = useQueryClient()

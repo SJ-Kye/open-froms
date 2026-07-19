@@ -21,9 +21,9 @@ import styles from './PublicFormPage.module.css'
 
 /**
  * 익명 응답 화면입니다. 이 경로만 인증 없이 열리며, 제작자용 껍데기(AppShell)를 쓰지 않습니다 —
- * 응답자에게 폼 목록·로그아웃은 의미가 없습니다.
+ * 응답자에게 설문지 목록·로그아웃은 의미가 없습니다.
  *
- * <p>화면은 네 갈래입니다: 없는 링크(404) · 마감된 폼 · 응답 입력 · 제출 완료.
+ * <p>화면은 네 갈래입니다: 없는 링크(404) · 마감된 설문지 · 응답 입력 · 제출 완료.
  */
 export default function PublicFormPage() {
   const { slug = '' } = useParams()
@@ -40,7 +40,7 @@ export default function PublicFormPage() {
   } = useQuery({
     queryKey: ['public-form', slug],
     queryFn: () => fetchPublicForm(slug),
-    // 응답 화면은 열려 있는 동안 폼이 바뀌지 않는다고 보고, 창을 오갈 때마다 다시 받지 않습니다.
+    // 응답 화면은 열려 있는 동안 설문지가 바뀌지 않는다고 보고, 창을 오갈 때마다 다시 받지 않습니다.
     // 작성 중이던 입력이 리렌더로 흔들리는 것을 막는 목적도 있습니다.
     refetchOnWindowFocus: false,
     retry: false,
@@ -66,7 +66,7 @@ export default function PublicFormPage() {
       <Layout>
         <div className="card">
           {apiError.status === 404 ? (
-            // 서버는 없는 slug 와 미발행 폼을 같은 404 로 답합니다(발행 전 폼의 존재를 감추기
+            // 서버는 없는 slug 와 미발행 설문지를 같은 404 로 답합니다(발행 전 설문지의 존재를 감추기
             // 위해). 화면도 그 구분을 만들지 않습니다.
             <EmptyState
               icon={<SearchX size={40} />}
@@ -202,7 +202,7 @@ export default function PublicFormPage() {
 
     if (apiError.code === 'FORM_CLOSED') {
       // 조회 시점엔 열려 있었는데 작성하는 사이에 마감된 경우입니다. 값을 고쳐도 제출할 수 없으므로
-      // 입력 폼을 걷고 사실을 알립니다.
+      // 입력 화면을 걷고 사실을 알립니다.
       setClosedDuringWriting(true)
       return
     }

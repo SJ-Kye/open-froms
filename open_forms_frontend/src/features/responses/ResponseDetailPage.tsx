@@ -14,8 +14,8 @@ import styles from './ResponsesPage.module.css'
 /**
  * 응답 1건의 상세입니다.
  *
- * <p>서버가 **폼의 모든 질문**을 순서대로, 답하지 않은 문항까지 `answered: false` 로 담아 주므로
- * 화면은 폼 구조를 따로 조회하지 않습니다. 체크박스의 여러 저장 행도 이미 한 문항으로 묶여 옵니다.
+ * <p>서버가 **설문지의 모든 질문**을 순서대로, 답하지 않은 문항까지 `answered: false` 로 담아 주므로
+ * 화면은 설문지 구조를 따로 조회하지 않습니다. 체크박스의 여러 저장 행도 이미 한 문항으로 묶여 옵니다.
  */
 export default function ResponseDetailPage() {
   const { id, responseId } = useParams()
