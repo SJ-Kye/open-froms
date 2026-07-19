@@ -115,7 +115,26 @@
 - `OpenApiConfig` 에 API 메타데이터와 JWT `bearerAuth` 보안 스킴(HTTP/bearer/JWT)을 정의해 Swagger UI 의 Authorize 버튼으로 보호 API 를 시험할 수 있게 했습니다.
 - **전역 `SecurityRequirement` 를 두지 않고**, 인증이 필요한 오퍼레이션(`/api/auth/me`)에만 `@SecurityRequirement` 를 붙였습니다. **이유**: 전역으로 걸면 `register`·`login`·`/api/public/**` 같은 익명 경로까지 잠금으로 잘못 표기됩니다. 실측(`GET /v3/api-docs`)으로 `/me` 에만 `security:[{bearerAuth}]` 가 붙고 register/login 은 비어 있음을 확인해 05 문서의 🔒/🔓 표기와 일치시켰습니다.
 
-<!-- 이후 Phase 3~9 진행 시 여기에 계속 추가 -->
+### [Phase 3A] 폼(Forms) CRUD — Claude Code (하이브리드 TDD)
+
+Phase 3 를 사용자 결정에 따라 Forms 우선으로 진행했습니다. 규칙(소유권·상태 전이)은 실패 테스트 먼저, 컨트롤러는 구현 후 통합 테스트로 검증했습니다.
+
+**T22. 404/403 구분을 가드에 집약 — Claude Code (설계 판단)**
+- `FormAccessGuard` 에 소유권 검사를 모으고 **존재(404)→소유(403) 순서**로 판단했습니다. **이유**: 없는 폼을 403 으로 답하면 리소스 존재 여부가 뒤바뀌어 노출됩니다. 없으면 404(`FORM_NOT_FOUND`), 있으나 남의 것이면 403(Spring `AccessDeniedException`)으로 명확히 갈립니다. 가드는 다음 라운드(질문 CRUD)에서 재사용합니다.
+
+**T23. 상태 전이 불변식을 도메인에 — Claude Code (설계 판단)**
+- 선형 forward-only(`DRAFT→PUBLISHED→CLOSED`) 규칙을 `FormStatus.canTransitionTo` + `Form.changeStatus` 로 **엔티티가 스스로** 지키게 하고, 무효 전이는 409(`INVALID_STATUS_TRANSITION`)로 막았습니다. 기존 엔티티에 setter 가 없어 `updateDetails`/`changeStatus` 변경 메서드를 추가했습니다. **이유**: 상태 규칙이 서비스 곳곳에 흩어지지 않고 도메인 한곳에 응집됩니다.
+
+**T24. responseCount 를 모듈 경계 안전하게 — Claude Code (설계 판단)**
+- 목록의 폼별 응답 수를 `FormRepository` 의 **네이티브 배치 카운트**(`WHERE form_id IN(:ids) GROUP BY`)+인터페이스 투영으로 구했습니다. **이유**: `form` 모듈이 `response` 자바 타입에 의존하면 `common ← user ← form ← response` 방향이 깨집니다. 네이티브 쿼리는 `responses` 테이블만 참조해 역의존 없이 문서 계약의 responseCount 를 실제 값으로 채웁니다. 대상이 비면 쿼리를 생략해 `IN ()` 오류를 막습니다.
+
+**T25. 삭제는 DB 캐스케이드에 위임 — Claude Code**
+- 폼 삭제는 `formRepository.delete(form)` 한 번으로, 하위 질문·선택지·응답·답변은 **DB `ON DELETE CASCADE`**(V1 에서 검증됨)가 정리합니다. JPA 캐스케이드/orphanRemoval 을 두지 않아 매핑이 단순합니다.
+
+**T26. 슬라이스 대신 전체 컨텍스트 통합 테스트 — Claude Code**
+- `@SpringBootTest`+MockMvc 로 실제 보안 체인·필터를 포함해, **두 사용자를 등록/로그인**시켜 소유권 403 을 실제로 검증했습니다. 런타임(로컬 PostgreSQL)에서도 생성(201·Location·slug)·목록 envelope·403·404·상태 200/409·삭제 204→404 를 curl 로 교차 확인했습니다.
+
+<!-- 이후 Phase 3B(질문)~9 진행 시 여기에 계속 추가 -->
 
 ## 수정 이유 분류 (누적)
 | 분류 | 사례 |
@@ -124,4 +143,4 @@
 | 최신성/정합 | Boot 3.x(구 지식) → 실측 4.1.0, 프론트 버전 추정치 → 실측치 |
 | 재현성 개선 | foojay toolchain 자동 프로비저닝 추가 |
 | 호환성 확인 | springdoc 3.0.3(Boot 4 호환 라인) 고정 |
-| 설계 판단 | 감사 컬럼 선택 적용; 체크박스=MULTIPLE_CHOICE 재사용; answer_options 제거; users 만 UUID 혼합 전략; 에러만 래퍼+traceId 헤더; api_call_logs 주체 VARCHAR(모듈 경계); Security 무상태만 common; 로그인 실패 401 통일(계정 열거 차단); UserDetailsService 미도입; OpenAPI 보안 표기 오퍼레이션별(전역 미사용) |
+| 설계 판단 | 감사 컬럼 선택 적용; 체크박스=MULTIPLE_CHOICE 재사용; answer_options 제거; users 만 UUID 혼합 전략; 에러만 래퍼+traceId 헤더; api_call_logs 주체 VARCHAR(모듈 경계); Security 무상태만 common; 로그인 실패 401 통일(계정 열거 차단); UserDetailsService 미도입; OpenAPI 보안 표기 오퍼레이션별(전역 미사용); 소유권 가드 404→403 순서; 상태 전이 불변식 도메인 응집; responseCount 네이티브 배치(모듈 경계); 폼 삭제 DB 캐스케이드 위임 |
