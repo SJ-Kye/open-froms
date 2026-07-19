@@ -77,13 +77,45 @@
 **T13. 설계 문서(04) 본문 작성 — Claude Code**
 - 사용자 지시로 docs/04 본문을 채우고 V1__init.sql 과 컬럼·인덱스 일치를 스크립트로 대조했습니다. **주의**: 통상 docs/ 설계 본문은 사용자가 직접 작성하는 것이 본 프로젝트 규율이며, 이 초안은 사용자 검토·재작성 대상입니다.
 
-<!-- 이후 Phase 1~9 진행 시 여기에 계속 추가 -->
+### [Phase 1] 백엔드 공통 인프라 (에러 처리·traceId·API 이력·Security/JWT) — Claude Code
+
+패키지 구조를 **기능별+계층 하위 / 모듈러 모놀리스**로 재편(사용자 선택)한 뒤 공통 인프라를 구축했습니다. 규율은 `common ← user ← form ← response` 단방향 의존이며, 이 경계가 아래 설계 판단들의 근거가 됩니다.
+
+**T14. 응답/추적 형식 결정 — 사용자 판단 + Claude 구현**
+- 사용자 요청(공통 응답·traceId·API 호출 이력)을 받아, "에러만 래퍼 + traceId 는 헤더" 로 확정했습니다. **이유**: 성공 응답은 설계 문서(05)대로 bare 본문을 유지해 문서 변경을 최소화하고, `X-Trace-Id` 헤더 + 에러 본문 `traceId` 필드로 추적성을 확보했습니다.
+- API 호출 이력(`api_call_logs`, V2)은 **메타데이터만 비동기 저장**하고 본문·비밀번호·JWT 는 저장하지 않습니다. 주체 컬럼을 FK(UUID) 대신 `principal VARCHAR` 로 둔 것은 **직접 판단**입니다. **이유**: 매 요청 email→UUID 조회를 없애고, `common` 이 `user` 모듈에 의존하지 않도록 경계를 지키기 위함입니다(감사 `created_by` 와 동일 소스).
+
+**T15. Boot 4 = Jackson 3 발견·수정 — Claude Code (버그 수정)**
+- 필터단 401/403 직렬화에 `com.fasterxml.jackson`(Jackson 2) `ObjectMapper` 를 주입했다가 `NoSuchBeanDefinitionException` 으로 컨텍스트 로드가 실패했습니다. **원인**: Spring Boot 4 는 **Jackson 3(`tools.jackson`)** 을 기본 빈으로 씁니다. import 를 `tools.jackson.databind.*` 로 교체해 해결했습니다.
+
+**T16. 슬라이스 테스트 함정 회피 — Claude Code (설계 판단)**
+- `@WebMvcTest` 슬라이스가 `WebConfig→인터셉터→라이터` 빈을 끌어와 로딩에 실패했습니다. `GlobalExceptionHandler` 검증은 애플리케이션 컨텍스트 없이 `standaloneSetup` 으로 전환해 advice 만 독립 검증했습니다. **이유**: 예외 변환 규칙은 컨텍스트 무관하므로 슬라이스 의존을 없애는 편이 견고합니다.
+
+**T17. 모듈 경계로 인한 인증 범위 분리 — Claude Code (설계 판단)**
+- Security/JWT 를 `common` 에 두되 **무상태 검증만**(토큰 subject=이메일) 담고, `UserDetailsService`·비밀번호 대조는 Phase 2(`user` 모듈)로 미뤘습니다. **이유**: `common` 이 `user` 에 의존하면 모듈러 모놀리스 경계가 깨지므로, DB 조회 없는 서명 검증만 공통에 남겼습니다.
+
+### [Phase 2] 인증 (회원가입·로그인·본인 조회) — Claude Code (하이브리드 TDD)
+
+서비스 규칙은 실패 테스트 먼저(이메일 중복 409·잘못된 자격 401 → red→green), 컨트롤러는 구현 후 통합 테스트로 검증했습니다.
+
+**T18. UserDetailsService 미도입 — Claude Code (설계 판단)**
+- 무상태 JWT + 커스텀 로그인 엔드포인트에서는 Spring 의 `AuthenticationManager`/`UserDetailsService` 를 쓰지 않고, `AuthService` 에서 `PasswordEncoder.matches` 로 직접 대조했습니다. **이유**: 매 요청 인증은 JWT 필터가 이미 처리하며, 직접 대조가 더 단순하고 `common ← user` 경계도 깔끔합니다.
+- 로그인 실패 시 **이메일 미존재와 비밀번호 불일치를 동일한 401(`INVALID_CREDENTIALS`)** 로 통일했습니다. **이유**: 계정 존재 여부가 노출되면 사용자 열거(enumeration) 단서가 됩니다.
+- 컨트롤러 흐름의 401 은 필터단(`AuthenticationEntryPoint`) 이 아니라 `UnauthorizedException`(`BusinessException` 하위)으로 던져 `GlobalExceptionHandler` 를 거칩니다. **이유**: 서비스에서 `AuthenticationException` 을 던지면 advice 폴백(500)으로 빠지므로, 상태 캐리어 예외로 통일했습니다.
+
+**T19. `/api/auth/me` 인증 누락 버그 발견·수정 — Claude Code (버그 수정, 통합 테스트로 발견)**
+- Phase 1 `SecurityConfig` 가 `/api/auth/**` 를 통째로 permitAll 하고 있어, 인증이 필요한 `/api/auth/me` 까지 미인증으로 통과해 `Authentication` 이 null → **500** 이 났습니다. permitAll 대상을 `register`·`login` 두 경로로 한정해 `/me` 가 `authenticated()` 에 걸리도록 고쳤습니다(`fix:` 커밋으로 흔적). **주목**: 실제 보안 체인을 포함한 `@SpringBootTest` 통합 테스트가 아니었으면 슬라이스로는 잡히지 않았을 결함입니다.
+
+**T20. 런타임 실측 교차검증 — Claude Code**
+- 일회용 PostgreSQL 16 컨테이너로 register→login→`/me` 전 흐름을 curl 로 재현하고 DB 를 직접 조회해, (1) `users.password_hash` 가 BCrypt(`$2a$`)로 저장(원문 아님), (2) 인증 요청의 `api_call_logs.principal` 이 **실제 로그인 이메일**로 기록됨을 확인했습니다. **교훈**: 비동기 이력 기록의 주체 캡처는 단위 테스트로 덮이지 않아 실측이 필요합니다.
+
+<!-- 이후 Phase 3~9 진행 시 여기에 계속 추가 -->
 
 ## 수정 이유 분류 (누적)
 | 분류 | 사례 |
 |---|---|
-| 버그 수정 | foojay 0.9.0 `IBM_SEMERU` 오류 → 1.0.0; answers 연쇄 삭제 누락(FK CASCADE) → 실측 재현 후 수정 |
+| 버그 수정 | foojay 0.9.0 `IBM_SEMERU` 오류 → 1.0.0; answers 연쇄 삭제 누락(FK CASCADE) → 실측 재현 후 수정; Boot 4 Jackson 3 `ObjectMapper` 오주입 → `tools.jackson` 교체; `/api/auth/me` permitAll 과다 → 인증 필요로 축소(통합 테스트로 발견) |
 | 최신성/정합 | Boot 3.x(구 지식) → 실측 4.1.0, 프론트 버전 추정치 → 실측치 |
 | 재현성 개선 | foojay toolchain 자동 프로비저닝 추가 |
 | 호환성 확인 | springdoc 3.0.3(Boot 4 호환 라인) 고정 |
-| 설계 판단 | 감사 컬럼 선택 적용; 체크박스=MULTIPLE_CHOICE 재사용; answer_options 제거; users 만 UUID 혼합 전략 |
+| 설계 판단 | 감사 컬럼 선택 적용; 체크박스=MULTIPLE_CHOICE 재사용; answer_options 제거; users 만 UUID 혼합 전략; 에러만 래퍼+traceId 헤더; api_call_logs 주체 VARCHAR(모듈 경계); Security 무상태만 common; 로그인 실패 401 통일(계정 열거 차단); UserDetailsService 미도입 |
