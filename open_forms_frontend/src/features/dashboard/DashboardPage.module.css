@@ -50,8 +50,16 @@
 }
 
 .sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-size: 1.02rem;
   margin-bottom: 4px;
+}
+
+/* 아이콘만 강조색을 쓰고 글자는 텍스트 토큰을 유지합니다(계열 색을 글자에 쓰지 않는 규칙). */
+.sectionTitle svg {
+  color: var(--accent-primary);
 }
 
 .sectionHint {

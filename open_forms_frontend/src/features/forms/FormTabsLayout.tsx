@@ -4,6 +4,7 @@ import { ArrowLeft, BarChart3, Inbox, Pencil, Send, Square } from 'lucide-react'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import ErrorBanner from '../../components/ErrorBanner'
 import Spinner from '../../components/Spinner'
+import { useToast } from '../../components/useToast'
 import { toApiError } from '../../lib/apiError'
 import type { FormStatus } from '../../types/api'
 import StatusBadge from './StatusBadge'
@@ -26,6 +27,7 @@ export default function FormTabsLayout() {
   const formId = Number(id)
   const { data: form, isPending, isError, error } = useFormQuery(formId)
   const changeStatus = useChangeStatusMutation(formId)
+  const showToast = useToast()
   const [pendingStatus, setPendingStatus] = useState<FormStatus | null>(null)
 
   if (isPending) {
@@ -42,6 +44,7 @@ export default function FormTabsLayout() {
   }
 
   const target = nextStatus(form.status)
+  const blockedByEmptyQuestions = target === 'PUBLISHED' && form.questions.length === 0
 
   return (
     <div className="animate-fade-in">
@@ -53,17 +56,26 @@ export default function FormTabsLayout() {
           <h1 className={styles.title}>{form.title}</h1>
         </div>
         {target && (
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => setPendingStatus(target)}
-            // 질문이 없는 폼을 발행하면 응답자는 빈 화면을 봅니다. 서버가 막는 규칙은 아니지만
-            // 의도한 상황일 리 없으므로 화면에서 멈춰 세웁니다.
-            disabled={target === 'PUBLISHED' && form.questions.length === 0}
-          >
-            {target === 'PUBLISHED' ? <Send size={16} /> : <Square size={16} />}
-            {target === 'PUBLISHED' ? '발행하기' : '응답 마감'}
-          </button>
+          <div className={styles.headAction}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setPendingStatus(target)}
+              // 질문이 없는 폼을 발행하면 응답자는 빈 화면을 봅니다. 서버가 막는 규칙은 아니지만
+              // 의도한 상황일 리 없으므로 화면에서 멈춰 세웁니다.
+              disabled={blockedByEmptyQuestions}
+            >
+              {target === 'PUBLISHED' ? <Send size={16} /> : <Square size={16} />}
+              {target === 'PUBLISHED' ? '발행하기' : '응답 마감'}
+            </button>
+            {/*
+              버튼이 비활성인 이유를 버튼 바로 아래 둡니다. 화면 상단 배너로 올리면 정작 버튼을
+              누르려 볼 때는 이유가 시야에 없습니다.
+            */}
+            {blockedByEmptyQuestions && (
+              <span className={styles.actionNote}>질문을 하나 이상 추가하면 발행할 수 있습니다.</span>
+            )}
+          </div>
         )}
       </div>
 
@@ -94,7 +106,11 @@ export default function FormTabsLayout() {
         pending={changeStatus.isPending}
         onConfirm={() => {
           if (pendingStatus) {
-            void changeStatus.mutateAsync(pendingStatus).then(() => setPendingStatus(null))
+            const done = pendingStatus === 'PUBLISHED' ? '폼을 발행했습니다.' : '응답을 마감했습니다.'
+            void changeStatus.mutateAsync(pendingStatus).then(() => {
+              setPendingStatus(null)
+              showToast(done)
+            })
           }
         }}
         onCancel={() => setPendingStatus(null)}

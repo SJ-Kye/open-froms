@@ -4,6 +4,7 @@ import { ArrowLeft, Trash2 } from 'lucide-react'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import ErrorBanner from '../../components/ErrorBanner'
 import Spinner from '../../components/Spinner'
+import { useToast } from '../../components/useToast'
 import { toApiError } from '../../lib/apiError'
 import { formatDateTime } from '../../lib/formatDate'
 import type { AnswerDetail } from '../../types/api'
@@ -21,6 +22,7 @@ export default function ResponseDetailPage() {
   const formId = Number(id)
   const targetId = Number(responseId)
   const navigate = useNavigate()
+  const showToast = useToast()
   const [confirming, setConfirming] = useState(false)
 
   const { data, isPending, isError, error } = useResponseQuery(formId, targetId)
@@ -78,9 +80,10 @@ export default function ResponseDetailPage() {
         pending={deleteResponse.isPending}
         onConfirm={() => {
           // 삭제한 응답의 상세에 머무를 수 없으므로 목록으로 돌아갑니다.
-          void deleteResponse
-            .mutateAsync(targetId)
-            .then(() => navigate(`/forms/${formId}/responses`, { replace: true }))
+          void deleteResponse.mutateAsync(targetId).then(() => {
+            navigate(`/forms/${formId}/responses`, { replace: true })
+            showToast('응답을 삭제했습니다.')
+          })
         }}
         onCancel={() => setConfirming(false)}
       />

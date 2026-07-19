@@ -1,15 +1,27 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarDays, ClipboardList, MessageSquare, Pencil, Plus, Trash2 } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+import {
+  BarChart3,
+  CalendarDays,
+  ClipboardList,
+  Link as LinkIcon,
+  MessageSquare,
+  Pencil,
+  Plus,
+  Trash2,
+} from 'lucide-react'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import EmptyState from '../../components/EmptyState'
 import ErrorBanner from '../../components/ErrorBanner'
 import Spinner from '../../components/Spinner'
+import { useToast } from '../../components/useToast'
 import { toApiError } from '../../lib/apiError'
 import { formatDate } from '../../lib/formatDate'
 import type { FormStatus, FormSummaryResponse } from '../../types/api'
 import StatusBadge from './StatusBadge'
-import { useCreateFormMutation, useDeleteFormMutation, useFormsQuery } from './useForms'
+import { fetchForm } from './formsApi'
+import { formKeys, useCreateFormMutation, useDeleteFormMutation, useFormsQuery } from './useForms'
 import styles from './FormsListPage.module.css'
 
 const PAGE_SIZE = 12
@@ -23,6 +35,8 @@ const FILTERS: { value: FormStatus | 'ALL'; label: string }[] = [
 
 export default function FormsListPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const showToast = useToast()
   const [page, setPage] = useState(0)
   const [filter, setFilter] = useState<FormStatus | 'ALL'>('ALL')
   const [pendingDelete, setPendingDelete] = useState<FormSummaryResponse | null>(null)
@@ -52,6 +66,23 @@ export default function FormsListPage() {
     }
     await deleteForm.mutateAsync(pendingDelete.id)
     setPendingDelete(null)
+    showToast('폼을 삭제했습니다.')
+  }
+
+  /**
+   * 목록에서 바로 공개 링크를 복사합니다.
+   *
+   * <p>목록 DTO 에는 `slug` 가 없어(제작자용 요약이라 필요 없던 값) 상세를 한 번 받아 옵니다.
+   * 링크는 발행 이후에만 의미가 있으므로 버튼도 그때만 보입니다 — DRAFT 의 slug 로 열면 응답자는
+   * 404 를 봅니다.
+   */
+  async function copyLink(formId: number) {
+    const detail = await queryClient.fetchQuery({
+      queryKey: formKeys.detail(formId),
+      queryFn: () => fetchForm(formId),
+    })
+    await navigator.clipboard.writeText(`${window.location.origin}/f/${detail.slug}`)
+    showToast('공개 링크를 복사했습니다.')
   }
 
   return (
@@ -165,13 +196,34 @@ export default function FormsListPage() {
                     {/* DRAFT 가 아니면 질문을 고칠 수 없으므로(서버 409) 라벨로 미리 알립니다. */}
                     {form.status === 'DRAFT' ? '편집' : '열기'}
                   </button>
+                  {/* 발행된 폼에서 가장 자주 하는 일이 링크 공유이므로 목록에서 바로 꺼냅니다. */}
+                  {form.status !== 'DRAFT' && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => void copyLink(form.id)}
+                    >
+                      <LinkIcon size={15} />
+                      링크
+                    </button>
+                  )}
+                  {form.responseCount > 0 && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => navigate(`/forms/${form.id}/dashboard`)}
+                    >
+                      <BarChart3 size={15} />
+                      집계
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="btn btn-danger"
                     onClick={() => setPendingDelete(form)}
+                    aria-label="폼 삭제"
                   >
                     <Trash2 size={15} />
-                    삭제
                   </button>
                 </div>
               </article>

@@ -5,6 +5,7 @@ import ConfirmDialog from '../../components/ConfirmDialog'
 import EmptyState from '../../components/EmptyState'
 import ErrorBanner from '../../components/ErrorBanner'
 import Spinner from '../../components/Spinner'
+import { useToast } from '../../components/useToast'
 import { toApiError } from '../../lib/apiError'
 import { formatDateTime } from '../../lib/formatDate'
 import type { ResponseSummaryItem } from '../../types/api'
@@ -19,6 +20,7 @@ export default function ResponsesPage() {
   const { id } = useParams()
   const formId = Number(id)
   const navigate = useNavigate()
+  const showToast = useToast()
   const [page, setPage] = useState(0)
   const [pendingDelete, setPendingDelete] = useState<ResponseSummaryItem | null>(null)
 
@@ -144,9 +146,10 @@ export default function ResponsesPage() {
         pending={deleteResponse.isPending}
         onConfirm={() => {
           if (pendingDelete) {
-            void deleteResponse
-              .mutateAsync(pendingDelete.responseId)
-              .then(() => setPendingDelete(null))
+            void deleteResponse.mutateAsync(pendingDelete.responseId).then(() => {
+              setPendingDelete(null)
+              showToast('응답을 삭제했습니다.')
+            })
           }
         }}
         onCancel={() => setPendingDelete(null)}

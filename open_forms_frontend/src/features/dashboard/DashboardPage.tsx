@@ -1,5 +1,5 @@
 import { useParams } from 'react-router-dom'
-import { BarChart3 } from 'lucide-react'
+import { BarChart3, ListChecks, TrendingUp } from 'lucide-react'
 import EmptyState from '../../components/EmptyState'
 import ErrorBanner from '../../components/ErrorBanner'
 import Spinner from '../../components/Spinner'
@@ -74,7 +74,10 @@ export default function DashboardPage() {
       </div>
 
       <section className={`card ${styles.section}`}>
-        <h2 className={styles.sectionTitle}>일별 응답 추이</h2>
+        <h2 className={styles.sectionTitle}>
+          <TrendingUp size={17} />
+          일별 응답 추이
+        </h2>
         <p className={styles.sectionHint}>
           발행일부터 {form?.status === 'CLOSED' ? '마감일' : '오늘'}까지, 응답이 없던 날도 0 으로
           이어 그립니다.
@@ -87,6 +90,7 @@ export default function DashboardPage() {
       </section>
 
       <h2 className={styles.sectionTitle} style={{ marginBottom: 16 }}>
+        <ListChecks size={17} />
         문항별 응답
       </h2>
       <div className={styles.questionGrid}>
