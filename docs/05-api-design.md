@@ -110,7 +110,7 @@
   "status": 409,
   "error": "Conflict",
   "code": "FORM_CLOSED",
-  "message": "종료된 폼에는 응답할 수 없습니다.",
+  "message": "종료된 설문지에는 응답할 수 없습니다.",
   "path": "/api/public/forms/0q0z8vve/responses",
   "traceId": "01a6b585-5f0d-4f73-b31b-fc4fbe756691",
   "fieldErrors": []
@@ -469,7 +469,7 @@
   "status": 409,
   "error": "Conflict",
   "code": "FORM_CLOSED",
-  "message": "종료된 폼에는 응답할 수 없습니다.",
+  "message": "종료된 설문지에는 응답할 수 없습니다.",
   "path": "/api/public/forms/0q0z8vve/responses",
   "traceId": "01a6b585-5f0d-4f73-b31b-fc4fbe756691",
   "fieldErrors": []

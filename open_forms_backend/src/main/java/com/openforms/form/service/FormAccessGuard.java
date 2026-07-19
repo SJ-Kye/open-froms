@@ -36,7 +36,7 @@ public class FormAccessGuard {
     public Form requireOwnedForm(Long formId, String email) {
         User user = currentUser(email);
         Form form = formRepository.findById(formId)
-                .orElseThrow(() -> new ResourceNotFoundException("FORM_NOT_FOUND", "폼을 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("FORM_NOT_FOUND", "설문지를 찾을 수 없습니다."));
         if (!form.getUser().getId().equals(user.getId())) {
             throw new AccessDeniedException("접근 권한이 없습니다.");
         }

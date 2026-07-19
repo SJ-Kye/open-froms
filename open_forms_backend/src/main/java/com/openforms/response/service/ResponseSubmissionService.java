@@ -53,7 +53,7 @@ public class ResponseSubmissionService {
     public SubmitResponseResult submit(String slug, SubmitResponseRequest request) {
         Form form = publicFormService.requireVisibleForm(slug); // 없음·미발행 → 404
         if (form.getStatus() == FormStatus.CLOSED) {
-            throw new ConflictException("FORM_CLOSED", "종료된 폼에는 응답할 수 없습니다.");
+            throw new ConflictException("FORM_CLOSED", "종료된 설문지에는 응답할 수 없습니다.");
         }
 
         List<Question> questions = questionLoader.questionsOf(form.getId());
@@ -81,7 +81,7 @@ public class ResponseSubmissionService {
         for (AnswerRequest answer : answers) {
             if (!questionIds.contains(answer.questionId())) {
                 throw new BadRequestException("UNKNOWN_QUESTION",
-                        "이 폼에 없는 질문입니다: " + answer.questionId());
+                        "이 설문지에 없는 질문입니다: " + answer.questionId());
             }
             if (byQuestion.putIfAbsent(answer.questionId(), answer) != null) {
                 throw new BadRequestException("DUPLICATE_ANSWER",

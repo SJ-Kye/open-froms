@@ -50,6 +50,6 @@ public class PublicFormService {
     public Form requireVisibleForm(String slug) {
         return formRepository.findBySlug(slug)
                 .filter(form -> form.getStatus() != FormStatus.DRAFT)
-                .orElseThrow(() -> new ResourceNotFoundException("FORM_NOT_FOUND", "폼을 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("FORM_NOT_FOUND", "설문지를 찾을 수 없습니다."));
     }
 }

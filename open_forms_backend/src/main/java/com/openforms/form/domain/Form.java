@@ -97,7 +97,7 @@ public class Form extends AuditableEntity {
     public void requireEditable() {
         if (this.status != FormStatus.DRAFT) {
             throw new ConflictException("FORM_NOT_EDITABLE",
-                    "발행되었거나 종료된 폼의 질문은 편집할 수 없습니다.");
+                    "발행되었거나 종료된 설문지의 질문은 편집할 수 없습니다.");
         }
     }
 }
