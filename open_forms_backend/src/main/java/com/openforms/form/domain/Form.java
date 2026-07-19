@@ -1,6 +1,7 @@
 package com.openforms.form.domain;
 
 import com.openforms.common.entity.AuditableEntity;
+import com.openforms.common.exception.ConflictException;
 import com.openforms.user.domain.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -51,5 +52,23 @@ public class Form extends AuditableEntity {
         this.description = description;
         this.slug = slug;
         this.status = FormStatus.DRAFT;
+    }
+
+    /** 제목·설명을 갱신합니다(감사 updated_by/at 은 JPA Auditing 이 자동 반영). */
+    public void updateDetails(String title, String description) {
+        this.title = title;
+        this.description = description;
+    }
+
+    /**
+     * 상태를 전이합니다. 허용되지 않는 전이(역방향·건너뛰기·동일 상태)는 {@link ConflictException}(409)로
+     * 막아 폼의 생명주기 불변식을 엔티티가 스스로 지킵니다.
+     */
+    public void changeStatus(FormStatus target) {
+        if (!this.status.canTransitionTo(target)) {
+            throw new ConflictException("INVALID_STATUS_TRANSITION",
+                    "허용되지 않는 상태 전이입니다: " + this.status + " → " + target);
+        }
+        this.status = target;
     }
 }
