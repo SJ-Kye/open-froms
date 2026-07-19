@@ -1,0 +1,27 @@
+# 공개 진입점 — 정적 번들 서빙 + /api 를 사설망의 open-forms-api 로 프록시합니다.
+# 배포: 리포지터리 루트에서 `fly deploy --config open_forms_frontend/fly.toml`
+
+app = "open-forms"
+primary_region = "nrt"
+
+[build]
+  dockerfile = "open_forms_frontend/Dockerfile"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  # nginx 는 수백 ms 안에 뜨므로 유휴 시 내려도 체감 지연이 거의 없습니다.
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    grace_period = "5s"
+    interval = "30s"
+    method = "GET"
+    timeout = "5s"
+    path = "/index.html"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
