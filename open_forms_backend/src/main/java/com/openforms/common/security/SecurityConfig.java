@@ -17,7 +17,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  *
  * <ul>
  *   <li>세션 미사용(STATELESS), CSRF·폼로그인·HTTP Basic 비활성.</li>
- *   <li>익명 허용: 회원가입/로그인({@code /api/auth/**}), 공개 폼({@code /api/public/**}), Swagger, 에러.</li>
+ *   <li>익명 허용: 회원가입/로그인({@code /api/auth/register}·{@code /login}), 공개 폼
+ *       ({@code /api/public/**}), Swagger, 에러. {@code /api/auth/me} 는 인증이 필요합니다.</li>
  *   <li>그 외는 인증 필요 — {@link JwtAuthenticationFilter} 가 Bearer 토큰을 검증해 인증을 주입.</li>
  *   <li>미인증 401·인가 실패 403 은 공통 에러 포맷으로 통일({@link RestAuthenticationEntryPoint}·
  *       {@link RestAccessDeniedHandler}).</li>
@@ -48,7 +49,9 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/api/public/**").permitAll()
+                        // 회원가입·로그인만 익명 허용. /api/auth/me 는 인증이 필요하므로 /api/auth/** 로
+                        // 통째로 열지 않습니다(그러면 /me 가 미인증으로 통과해 principal 이 없습니다).
+                        .requestMatchers("/api/auth/register", "/api/auth/login", "/api/public/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/error", "/favicon.ico").permitAll()
                         .anyRequest().authenticated())
