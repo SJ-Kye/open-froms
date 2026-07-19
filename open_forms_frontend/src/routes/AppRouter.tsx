@@ -1,5 +1,7 @@
+import { Suspense, lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import AppShell from '../components/AppShell'
+import Spinner from '../components/Spinner'
 import LoginPage from '../features/auth/LoginPage'
 import RegisterPage from '../features/auth/RegisterPage'
 import FormBuilderPage from '../features/forms/FormBuilderPage'
@@ -11,6 +13,13 @@ import ResponsesPage from '../features/responses/ResponsesPage'
 import NotFoundPage from '../pages/NotFoundPage'
 import AnonymousOnlyRoute from './AnonymousOnlyRoute'
 import ProtectedRoute from './ProtectedRoute'
+
+/**
+ * 대시보드만 지연 로딩합니다. 차트 라이브러리(Recharts)가 번들의 절반을 차지하는데, 이 앱에서
+ * 차트를 쓰는 화면은 집계 하나뿐입니다. 함께 묶으면 **응답자까지** 차트 라이브러리를 내려받게
+ * 됩니다 — 익명 응답 페이지는 링크를 처음 여는 사람이 보는 화면이라 특히 손해입니다.
+ */
+const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage'))
 
 /**
  * 라우팅 골격입니다. 경로는 **공개 / 익명 전용 / 제작자 전용** 세 갈래이며, 이 구분이 백엔드의
@@ -43,6 +52,14 @@ export default function AppRouter() {
             <Route index element={<FormBuilderPage />} />
             <Route path="responses" element={<ResponsesPage />} />
             <Route path="responses/:responseId" element={<ResponseDetailPage />} />
+            <Route
+              path="dashboard"
+              element={
+                <Suspense fallback={<Spinner page />}>
+                  <DashboardPage />
+                </Suspense>
+              }
+            />
           </Route>
         </Route>
       </Route>
