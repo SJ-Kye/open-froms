@@ -38,3 +38,6 @@ springdoc:
 logging:
   level:
     org.springframework.security: INFO
+  # 모든 로그 라인에 요청별 traceId 를 노출합니다(TraceIdFilter 가 MDC 에 세팅). 없으면 빈 값.
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{traceId:-}] %logger{36} - %msg%n"
