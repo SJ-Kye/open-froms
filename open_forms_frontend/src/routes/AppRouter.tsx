@@ -6,6 +6,8 @@ import FormBuilderPage from '../features/forms/FormBuilderPage'
 import FormTabsLayout from '../features/forms/FormTabsLayout'
 import FormsListPage from '../features/forms/FormsListPage'
 import PublicFormPage from '../features/public/PublicFormPage'
+import ResponseDetailPage from '../features/responses/ResponseDetailPage'
+import ResponsesPage from '../features/responses/ResponsesPage'
 import NotFoundPage from '../pages/NotFoundPage'
 import AnonymousOnlyRoute from './AnonymousOnlyRoute'
 import ProtectedRoute from './ProtectedRoute'
@@ -39,6 +41,8 @@ export default function AppRouter() {
           <Route path="/forms" element={<FormsListPage />} />
           <Route path="/forms/:id" element={<FormTabsLayout />}>
             <Route index element={<FormBuilderPage />} />
+            <Route path="responses" element={<ResponsesPage />} />
+            <Route path="responses/:responseId" element={<ResponseDetailPage />} />
           </Route>
         </Route>
       </Route>
