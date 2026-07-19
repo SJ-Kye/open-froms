@@ -35,7 +35,7 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
      * 평점·숫자형의 값별 응답 수입니다. 평균은 이 결과로부터 계산할 수 있으므로(값×개수의 합 ÷ 개수의 합)
      * 평균을 위한 질의를 따로 두지 않습니다.
      */
-    @Query(value = "SELECT a.question_id AS questionId, a.number_value AS value, COUNT(*) AS cnt FROM answers a "
+    @Query(value = "SELECT a.question_id AS questionId, a.number_value AS answer_value, COUNT(*) AS cnt FROM answers a "
             + "JOIN responses r ON a.response_id = r.id "
             + "WHERE r.form_id = :formId AND a.number_value IS NOT NULL "
             + "GROUP BY a.question_id, a.number_value ORDER BY a.question_id, a.number_value",
@@ -49,6 +49,14 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
     @Query("SELECT a.textValue FROM Answer a WHERE a.question.id = :questionId "
             + "AND a.textValue IS NOT NULL ORDER BY a.id DESC")
     List<String> findRecentTexts(@Param("questionId") Long questionId, Pageable pageable);
+
+    /**
+     * 한 응답의 답변 행을 지웁니다. DB 의 ON DELETE CASCADE 가 있는데도 명시적으로 지우는 이유는,
+     * 같은 트랜잭션에서 이미 읽어 둔 {@link Answer} 들이 영속성 컨텍스트에 남아 있으면 삭제된 응답을
+     * 참조한 채 flush 되어 {@code TransientPropertyValueException} 이 나기 때문입니다. DB 제약은 데이터
+     * 정합을, 이 호출은 영속성 컨텍스트 정합을 담당합니다.
+     */
+    void deleteByResponse_Id(Long responseId);
 
     /** 문항별 응답자 수 투영입니다. */
     interface QuestionCountRow {
@@ -70,7 +78,7 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
     interface ValueCountRow {
         Long getQuestionId();
 
-        int getValue();
+        int getAnswerValue();
 
         long getCnt();
     }

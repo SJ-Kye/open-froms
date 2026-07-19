@@ -1,7 +1,7 @@
 package com.openforms.response.repository;
 
 import com.openforms.response.domain.Response;
-import java.sql.Date;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -27,9 +27,9 @@ public interface ResponseRepository extends JpaRepository<Response, Long> {
      * 서비스가 담당합니다 — DB 에 날짜 생성(generate_series 등)을 요구하면 PostgreSQL 전용 문법이 되어
      * H2 테스트가 깨집니다.
      */
-    @Query(value = "SELECT CAST(created_at AS DATE) AS day, COUNT(*) AS cnt FROM responses "
-            + "WHERE form_id = :formId GROUP BY CAST(created_at AS DATE) ORDER BY day",
-            nativeQuery = true)
+    @Query("SELECT CAST(r.createdAt AS date) AS responseDay, COUNT(r) AS cnt FROM Response r "
+            + "WHERE r.form.id = :formId "
+            + "GROUP BY CAST(r.createdAt AS date) ORDER BY CAST(r.createdAt AS date)")
     List<DailyCountRow> countByDate(@Param("formId") Long formId);
 
     /**
@@ -54,9 +54,12 @@ public interface ResponseRepository extends JpaRepository<Response, Long> {
     List<AnsweredCountRow> countAnsweredQuestionsByResponseIds(
             @Param("responseIds") Collection<Long> responseIds);
 
-    /** 일별 응답 수 집계 결과 투영입니다. */
+    /**
+     * 일별 응답 수 집계 결과 투영입니다. 날짜 타입이 {@code java.sql.Date} 가 아니라 {@link LocalDate}
+     * 인 이유는 위 질의를 JPQL 로 두었기 때문입니다(네이티브였다면 드라이버가 주는 타입이 달랐습니다).
+     */
     interface DailyCountRow {
-        Date getDay();
+        LocalDate getResponseDay();
 
         long getCnt();
     }

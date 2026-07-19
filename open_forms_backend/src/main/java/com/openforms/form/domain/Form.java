@@ -72,6 +72,9 @@ public class Form extends AuditableEntity {
     /**
      * 상태를 전이합니다. 허용되지 않는 전이(역방향·건너뛰기·동일 상태)는 {@link ConflictException}(409)로
      * 막아 폼의 생명주기 불변식을 엔티티가 스스로 지킵니다.
+     *
+     * <p>전이가 성사된 시각을 함께 못박습니다. 전이는 선형·1회성이므로 각 시각은 한 번만 쓰이며, 이후
+     * 제목 수정 등으로 흔들리는 감사 컬럼과 달리 "언제 발행했는가"의 근거로 삼을 수 있습니다.
      */
     public void changeStatus(FormStatus target) {
         if (!this.status.canTransitionTo(target)) {
@@ -79,6 +82,12 @@ public class Form extends AuditableEntity {
                     "허용되지 않는 상태 전이입니다: " + this.status + " → " + target);
         }
         this.status = target;
+        LocalDateTime now = LocalDateTime.now();
+        if (target == FormStatus.PUBLISHED) {
+            this.publishedAt = now;
+        } else if (target == FormStatus.CLOSED) {
+            this.closedAt = now;
+        }
     }
 
     /**

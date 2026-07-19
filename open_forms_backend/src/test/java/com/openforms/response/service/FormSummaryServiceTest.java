@@ -102,9 +102,10 @@ class FormSummaryServiceTest {
         givenForm(form, 1);
         when(responseRepository.countByForm_Id(FORM_ID)).thenReturn(3L);
         when(responseRepository.countAnsweredQuestionPairs(FORM_ID)).thenReturn(3L);
-        when(responseRepository.countByDate(FORM_ID)).thenReturn(List.of(
-                dailyRow(publishedOn, 1L),
-                dailyRow(publishedOn.plusDays(2), 2L)));
+        // 행 스텁을 먼저 만들어 둡니다(when(...) 인자 안에서 스터빙하면 중첩 스터빙이 됩니다).
+        List<ResponseRepository.DailyCountRow> rows =
+                List.of(dailyRow(publishedOn, 1L), dailyRow(publishedOn.plusDays(2), 2L));
+        when(responseRepository.countByDate(FORM_ID)).thenReturn(rows);
 
         FormSummaryStats stats = service.summarize(FORM_ID, EMAIL);
 
@@ -140,8 +141,10 @@ class FormSummaryServiceTest {
                 .thenReturn(Map.of(1L, List.of(picked, ignored)));
         when(responseRepository.countByForm_Id(FORM_ID)).thenReturn(4L);
         when(responseRepository.countAnsweredQuestionPairs(FORM_ID)).thenReturn(4L);
-        when(answerRepository.countRespondentsByQuestion(FORM_ID)).thenReturn(List.of(questionCount(1L, 4L)));
-        when(answerRepository.countByOption(FORM_ID)).thenReturn(List.of(optionCount(1L, 100L, 4L)));
+        List<AnswerRepository.QuestionCountRow> respondents = List.of(questionCount(1L, 4L));
+        List<AnswerRepository.OptionCountRow> chosen = List.of(optionCount(1L, 100L, 4L));
+        when(answerRepository.countRespondentsByQuestion(FORM_ID)).thenReturn(respondents);
+        when(answerRepository.countByOption(FORM_ID)).thenReturn(chosen);
 
         FormSummaryStats stats = service.summarize(FORM_ID, EMAIL);
 
@@ -165,9 +168,11 @@ class FormSummaryServiceTest {
         when(questionLoader.optionsByQuestionId(List.of(rating))).thenReturn(Map.of());
         when(responseRepository.countByForm_Id(FORM_ID)).thenReturn(4L);
         when(responseRepository.countAnsweredQuestionPairs(FORM_ID)).thenReturn(4L);
-        when(answerRepository.countRespondentsByQuestion(FORM_ID)).thenReturn(List.of(questionCount(2L, 4L)));
-        when(answerRepository.countByNumberValue(FORM_ID))
-                .thenReturn(List.of(valueCount(2L, 1, 1L), valueCount(2L, 5, 3L)));
+        List<AnswerRepository.QuestionCountRow> respondents = List.of(questionCount(2L, 4L));
+        List<AnswerRepository.ValueCountRow> values =
+                List.of(valueCount(2L, 1, 1L), valueCount(2L, 5, 3L));
+        when(answerRepository.countRespondentsByQuestion(FORM_ID)).thenReturn(respondents);
+        when(answerRepository.countByNumberValue(FORM_ID)).thenReturn(values);
 
         FormSummaryStats stats = service.summarize(FORM_ID, EMAIL);
 
@@ -190,7 +195,8 @@ class FormSummaryServiceTest {
         when(questionLoader.optionsByQuestionId(List.of(text))).thenReturn(Map.of());
         when(responseRepository.countByForm_Id(FORM_ID)).thenReturn(2L);
         when(responseRepository.countAnsweredQuestionPairs(FORM_ID)).thenReturn(2L);
-        when(answerRepository.countRespondentsByQuestion(FORM_ID)).thenReturn(List.of(questionCount(3L, 2L)));
+        List<AnswerRepository.QuestionCountRow> respondents = List.of(questionCount(3L, 2L));
+        when(answerRepository.countRespondentsByQuestion(FORM_ID)).thenReturn(respondents);
         when(answerRepository.findRecentTexts(eq(3L), any()))
                 .thenReturn(List.of("친절했습니다", "배송이 빨랐어요"));
 
@@ -246,7 +252,7 @@ class FormSummaryServiceTest {
 
     private ResponseRepository.DailyCountRow dailyRow(LocalDate date, long count) {
         ResponseRepository.DailyCountRow row = mock(ResponseRepository.DailyCountRow.class);
-        when(row.getDay()).thenReturn(java.sql.Date.valueOf(date));
+        when(row.getResponseDay()).thenReturn(date);
         when(row.getCnt()).thenReturn(count);
         return row;
     }
@@ -269,7 +275,7 @@ class FormSummaryServiceTest {
     private AnswerRepository.ValueCountRow valueCount(Long questionId, int value, long count) {
         AnswerRepository.ValueCountRow row = mock(AnswerRepository.ValueCountRow.class);
         lenient().when(row.getQuestionId()).thenReturn(questionId);
-        when(row.getValue()).thenReturn(value);
+        when(row.getAnswerValue()).thenReturn(value);
         when(row.getCnt()).thenReturn(count);
         return row;
     }

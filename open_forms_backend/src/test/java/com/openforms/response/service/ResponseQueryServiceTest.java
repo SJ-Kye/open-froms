@@ -109,8 +109,9 @@ class ResponseQueryServiceTest {
         Pageable pageable = PageRequest.of(0, 20);
         when(responseRepository.findByForm_Id(FORM_ID, pageable))
                 .thenReturn(new PageImpl<>(List.of(response), pageable, 1));
+        List<ResponseRepository.AnsweredCountRow> counts = List.of(answeredCount(RESPONSE_ID, 2L));
         when(responseRepository.countAnsweredQuestionsByResponseIds(List.of(RESPONSE_ID)))
-                .thenReturn(List.of(answeredCount(RESPONSE_ID, 2L)));
+                .thenReturn(counts);
 
         PageResponse<ResponseSummaryItem> page = service.list(FORM_ID, EMAIL, pageable);
 
