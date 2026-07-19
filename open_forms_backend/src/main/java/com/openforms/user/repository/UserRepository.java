@@ -1,5 +1,6 @@
-package com.openforms.user;
+package com.openforms.user.repository;
 
+import com.openforms.user.domain.User;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;

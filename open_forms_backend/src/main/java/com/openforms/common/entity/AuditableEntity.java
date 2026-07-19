@@ -1,4 +1,4 @@
-package com.openforms.common;
+package com.openforms.common.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;

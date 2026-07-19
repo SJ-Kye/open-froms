@@ -1,7 +1,7 @@
-package com.openforms.response;
+package com.openforms.response.domain;
 
-import com.openforms.common.CreatedEntity;
-import com.openforms.form.Form;
+import com.openforms.common.entity.CreatedEntity;
+import com.openforms.form.domain.Form;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;

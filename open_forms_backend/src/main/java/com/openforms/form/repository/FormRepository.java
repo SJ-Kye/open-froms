@@ -1,5 +1,6 @@
-package com.openforms.form;
+package com.openforms.form.repository;
 
+import com.openforms.form.domain.Form;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 

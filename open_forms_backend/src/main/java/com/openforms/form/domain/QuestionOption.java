@@ -1,4 +1,4 @@
-package com.openforms.form;
+package com.openforms.form.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

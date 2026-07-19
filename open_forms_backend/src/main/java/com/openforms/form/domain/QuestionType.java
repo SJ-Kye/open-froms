@@ -1,4 +1,4 @@
-package com.openforms.form;
+package com.openforms.form.domain;
 
 /**
  * 질문 유형 9종입니다. 타입에 따라 응답이 저장되는 위치가 다릅니다(04 DB 설계 참고).

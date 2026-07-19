@@ -2,11 +2,11 @@ package com.openforms.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.openforms.common.JpaAuditingConfig;
-import com.openforms.form.Form;
-import com.openforms.form.FormRepository;
-import com.openforms.user.User;
-import com.openforms.user.UserRepository;
+import com.openforms.common.config.JpaAuditingConfig;
+import com.openforms.form.domain.Form;
+import com.openforms.form.repository.FormRepository;
+import com.openforms.user.domain.User;
+import com.openforms.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,7 +1,7 @@
-package com.openforms.response;
+package com.openforms.response.domain;
 
-import com.openforms.form.Question;
-import com.openforms.form.QuestionOption;
+import com.openforms.form.domain.Question;
+import com.openforms.form.domain.QuestionOption;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;

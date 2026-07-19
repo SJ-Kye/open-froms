@@ -1,7 +1,7 @@
-package com.openforms.form;
+package com.openforms.form.domain;
 
-import com.openforms.common.AuditableEntity;
-import com.openforms.user.User;
+import com.openforms.common.entity.AuditableEntity;
+import com.openforms.user.domain.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

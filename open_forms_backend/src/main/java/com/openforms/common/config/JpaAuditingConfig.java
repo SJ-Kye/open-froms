@@ -1,4 +1,4 @@
-package com.openforms.common;
+package com.openforms.common.config;
 
 import java.util.Optional;
 import org.springframework.context.annotation.Bean;
