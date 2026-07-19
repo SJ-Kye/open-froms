@@ -1,15 +1,26 @@
 package com.openforms.form.service;
 
 import com.openforms.common.response.PageResponse;
+import com.openforms.form.domain.Form;
 import com.openforms.form.domain.FormStatus;
+import com.openforms.form.domain.Question;
 import com.openforms.form.dto.CreateFormRequest;
 import com.openforms.form.dto.FormDetailResponse;
 import com.openforms.form.dto.FormStatusResponse;
 import com.openforms.form.dto.FormSummaryResponse;
+import com.openforms.form.dto.OptionResponse;
+import com.openforms.form.dto.QuestionResponse;
 import com.openforms.form.dto.UpdateFormRequest;
 import com.openforms.form.repository.FormRepository;
+import com.openforms.form.repository.FormRepository.ResponseCountRow;
 import com.openforms.form.repository.QuestionOptionRepository;
 import com.openforms.form.repository.QuestionRepository;
+import com.openforms.user.domain.User;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +32,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 public class FormService {
+
+    private static final int MAX_SLUG_ATTEMPTS = 10;
 
     private final FormRepository formRepository;
     private final QuestionRepository questionRepository;
@@ -40,29 +53,80 @@ public class FormService {
 
     @Transactional
     public FormDetailResponse create(String email, CreateFormRequest request) {
-        throw new UnsupportedOperationException("아직 구현되지 않았습니다.");
+        User owner = accessGuard.currentUser(email);
+        Form form = new Form(owner, request.title(), request.description(), uniqueSlug());
+        Form saved = formRepository.save(form);
+        return FormDetailResponse.of(saved, List.of());
     }
 
     public PageResponse<FormSummaryResponse> list(String email, FormStatus status, Pageable pageable) {
-        throw new UnsupportedOperationException("아직 구현되지 않았습니다.");
+        UUID userId = accessGuard.currentUser(email).getId();
+        Page<Form> page = (status == null)
+                ? formRepository.findByUser_Id(userId, pageable)
+                : formRepository.findByUser_IdAndStatus(userId, status, pageable);
+        Map<Long, Long> counts = responseCounts(page.map(Form::getId).getContent());
+        return PageResponse.of(page.map(form ->
+                FormSummaryResponse.of(form, counts.getOrDefault(form.getId(), 0L))));
     }
 
     public FormDetailResponse getDetail(String email, Long id) {
-        throw new UnsupportedOperationException("아직 구현되지 않았습니다.");
+        Form form = accessGuard.requireOwnedForm(id, email);
+        return FormDetailResponse.of(form, loadQuestions(form.getId()));
     }
 
     @Transactional
     public FormDetailResponse update(String email, Long id, UpdateFormRequest request) {
-        throw new UnsupportedOperationException("아직 구현되지 않았습니다.");
+        Form form = accessGuard.requireOwnedForm(id, email);
+        form.updateDetails(request.title(), request.description());
+        return FormDetailResponse.of(form, loadQuestions(form.getId()));
     }
 
     @Transactional
     public FormStatusResponse changeStatus(String email, Long id, FormStatus target) {
-        throw new UnsupportedOperationException("아직 구현되지 않았습니다.");
+        Form form = accessGuard.requireOwnedForm(id, email);
+        form.changeStatus(target);
+        return FormStatusResponse.from(form);
     }
 
     @Transactional
     public void delete(String email, Long id) {
-        throw new UnsupportedOperationException("아직 구현되지 않았습니다.");
+        Form form = accessGuard.requireOwnedForm(id, email);
+        formRepository.delete(form); // 자식(questions·options·responses·answers)은 DB ON DELETE CASCADE 로 정리
+    }
+
+    /** 충돌하지 않는 slug 를 확보합니다. 8자 임의값이라 충돌은 드물지만 한정 재시도로 방어합니다. */
+    private String uniqueSlug() {
+        for (int attempt = 0; attempt < MAX_SLUG_ATTEMPTS; attempt++) {
+            String slug = slugGenerator.generate();
+            if (formRepository.findBySlug(slug).isEmpty()) {
+                return slug;
+            }
+        }
+        throw new IllegalStateException("고유 slug 생성에 반복 실패했습니다.");
+    }
+
+    /** 폼별 응답 수를 한 번에 조회해 맵으로 만듭니다. 대상이 없으면 쿼리를 생략합니다. */
+    private Map<Long, Long> responseCounts(List<Long> formIds) {
+        if (formIds.isEmpty()) {
+            return Map.of();
+        }
+        return formRepository.countResponsesByFormIds(formIds).stream()
+                .collect(Collectors.toMap(ResponseCountRow::getFormId, ResponseCountRow::getCnt));
+    }
+
+    /** 폼의 질문과 선택지를 position 순으로 조립합니다(선택지는 한 번에 조회해 N+1 회피). */
+    private List<QuestionResponse> loadQuestions(Long formId) {
+        List<Question> questions = questionRepository.findByForm_IdOrderByPositionAsc(formId);
+        if (questions.isEmpty()) {
+            return List.of();
+        }
+        List<Long> questionIds = questions.stream().map(Question::getId).toList();
+        Map<Long, List<OptionResponse>> optionsByQuestion = optionRepository
+                .findByQuestion_IdInOrderByPositionAsc(questionIds).stream()
+                .collect(Collectors.groupingBy(o -> o.getQuestion().getId(),
+                        Collectors.mapping(OptionResponse::from, Collectors.toList())));
+        return questions.stream()
+                .map(q -> QuestionResponse.of(q, optionsByQuestion.getOrDefault(q.getId(), List.of())))
+                .toList();
     }
 }
