@@ -1,13 +1,24 @@
+/*
+ * 제작자 화면(.main-wrapper)은 상단 내비 아래에서 40px 를 두지만, 응답 화면은 내비가 없어 같은
+ * 값을 쓰면 제목이 창 맨 위에 붙습니다. 위쪽 여백을 더 크게 잡아 제목이 화면에서 자리를 갖게 합니다.
+ */
 .page {
   max-width: 720px;
   margin: 0 auto;
-  padding: 24px 20px 80px;
+  padding: 56px 20px 80px;
 }
 
 .topBar {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+/* 세로가 짧은 화면에서는 같은 여백이 낭비가 되므로 줄입니다. */
+@media (max-width: 640px) {
+  .page {
+    padding-top: 28px;
+  }
 }
 
 .header {
