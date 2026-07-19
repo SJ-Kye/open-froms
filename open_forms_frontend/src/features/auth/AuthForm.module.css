@@ -1,0 +1,51 @@
+/* 로그인·회원가입 화면 고유 레이아웃입니다(공용 프리미티브는 styles/base.css). */
+
+.header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.title {
+  font-size: 1.9rem;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+/* 아이콘을 입력칸 안쪽에 겹쳐 놓기 위한 래퍼입니다. */
+.inputWithIcon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.inputIcon {
+  position: absolute;
+  left: 14px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.inputWithIcon .input-field,
+.inputWithIcon input {
+  padding-left: 44px;
+}
+
+.banner {
+  margin-bottom: 20px;
+}
+
+.switch {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.switchLink {
+  font-weight: 600;
+  margin-left: 4px;
+}
