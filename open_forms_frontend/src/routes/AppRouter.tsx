@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import AppShell from '../components/AppShell'
 import LoginPage from '../features/auth/LoginPage'
 import RegisterPage from '../features/auth/RegisterPage'
+import FormBuilderPage from '../features/forms/FormBuilderPage'
 import FormsListPage from '../features/forms/FormsListPage'
 import NotFoundPage from '../pages/NotFoundPage'
 import PublicFormPlaceholderPage from '../pages/PublicFormPlaceholderPage'
@@ -31,6 +32,7 @@ export default function AppRouter() {
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
           <Route path="/forms" element={<FormsListPage />} />
+          <Route path="/forms/:id" element={<FormBuilderPage />} />
         </Route>
       </Route>
 
