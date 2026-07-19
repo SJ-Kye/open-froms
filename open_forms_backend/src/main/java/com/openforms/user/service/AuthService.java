@@ -6,6 +6,7 @@ import com.openforms.common.exception.UnauthorizedException;
 import com.openforms.common.security.JwtTokenProvider;
 import com.openforms.user.domain.User;
 import com.openforms.user.dto.LoginRequest;
+import com.openforms.user.dto.RefreshRequest;
 import com.openforms.user.dto.RegisterRequest;
 import com.openforms.user.dto.TokenResponse;
 import com.openforms.user.dto.UserResponse;
@@ -25,12 +26,14 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final RefreshTokenService refreshTokenService;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-            JwtTokenProvider jwtTokenProvider) {
+            JwtTokenProvider jwtTokenProvider, RefreshTokenService refreshTokenService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.refreshTokenService = refreshTokenService;
     }
 
     /** 이메일 중복이면 409, 아니면 비밀번호를 해싱해 저장하고 표현을 반환합니다. */
@@ -51,8 +54,19 @@ public class AuthService {
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw invalidCredentials();
         }
-        String token = jwtTokenProvider.issue(user.getEmail());
-        return TokenResponse.bearer(token, jwtTokenProvider.expiresInSeconds());
+        throw new UnsupportedOperationException("아직 구현되지 않았습니다.");
+    }
+
+    /** 리프레시 토큰을 회전시키고 새 토큰 쌍을 발급합니다. */
+    @Transactional
+    public TokenResponse refresh(RefreshRequest request) {
+        throw new UnsupportedOperationException("아직 구현되지 않았습니다.");
+    }
+
+    /** 제시된 리프레시 토큰을 폐기합니다(로그아웃). */
+    @Transactional
+    public void logout(RefreshRequest request) {
+        throw new UnsupportedOperationException("아직 구현되지 않았습니다.");
     }
 
     /** 인증 주체(이메일)에 해당하는 사용자 표현을 반환합니다. */
