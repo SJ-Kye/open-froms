@@ -5,7 +5,7 @@ import RegisterPage from '../features/auth/RegisterPage'
 import FormBuilderPage from '../features/forms/FormBuilderPage'
 import FormsListPage from '../features/forms/FormsListPage'
 import NotFoundPage from '../pages/NotFoundPage'
-import PublicFormPlaceholderPage from '../pages/PublicFormPlaceholderPage'
+import PublicFormPage from '../features/public/PublicFormPage'
 import AnonymousOnlyRoute from './AnonymousOnlyRoute'
 import ProtectedRoute from './ProtectedRoute'
 
@@ -20,7 +20,7 @@ export default function AppRouter() {
   return (
     <Routes>
       {/* 공개: 응답자용 */}
-      <Route path="/f/:slug" element={<PublicFormPlaceholderPage />} />
+      <Route path="/f/:slug" element={<PublicFormPage />} />
 
       {/* 익명 전용: 로그인한 사용자가 열면 폼 목록으로 */}
       <Route element={<AnonymousOnlyRoute />}>

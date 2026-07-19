@@ -1,0 +1,71 @@
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 20px 80px;
+}
+
+.topBar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.header {
+  padding: 28px 24px;
+  margin-bottom: 20px;
+  /* 제목 영역을 강조색 띠로 구분해 질문 카드와 구분합니다. */
+  border-top: 4px solid var(--accent-primary);
+}
+
+.title {
+  font-size: 1.7rem;
+  word-break: break-word;
+}
+
+.description {
+  margin-top: 10px;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  white-space: pre-wrap;
+}
+
+.requiredNote {
+  margin-top: 14px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.star {
+  color: var(--error);
+}
+
+.questions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.submitRow {
+  margin-top: 24px;
+}
+
+.banner {
+  margin-bottom: 20px;
+}
+
+.centered {
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.doneIcon {
+  color: var(--success);
+  margin-bottom: 16px;
+}
+
+.footer {
+  margin-top: 32px;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}

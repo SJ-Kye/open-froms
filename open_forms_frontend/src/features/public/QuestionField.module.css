@@ -1,0 +1,100 @@
+.field {
+  padding: 20px 22px;
+}
+
+.fieldError {
+  border-color: var(--error);
+}
+
+.title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+
+.required {
+  color: var(--error);
+  margin-left: 4px;
+}
+
+.hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 선택지 전체가 클릭 대상이 되도록 label 로 감쌉니다(작은 원만 노리지 않게). */
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  font-size: 0.93rem;
+}
+
+.choice:hover {
+  border-color: var(--accent-primary);
+}
+
+.choiceSelected {
+  border-color: var(--accent-primary);
+  background: var(--accent-glow);
+}
+
+.scale {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.scaleButton {
+  min-width: 46px;
+  height: 46px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.scaleButton:hover {
+  border-color: var(--accent-primary);
+}
+
+.scaleSelected {
+  background: var(--accent-gradient);
+  border-color: transparent;
+  color: #ffffff;
+}
+
+.scaleEnds {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+.error {
+  display: block;
+  margin-top: 10px;
+  font-size: 0.82rem;
+  color: var(--error);
+}
