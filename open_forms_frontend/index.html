@@ -1,10 +1,32 @@
 <!doctype html>
-<html lang="en">
+<html lang="ko">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>open_forms_frontend</title>
+    <!--
+      본문 Inter · 제목 Outfit. 네트워크가 없으면 tokens.css 의 system-ui 폴백으로 떨어지므로
+      글꼴을 못 받아도 화면은 그대로 동작합니다.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <title>Open Forms</title>
+    <script>
+      // React 가 마운트되기 전에 테마를 적용합니다. 이 줄이 없으면 다크 모드 사용자에게 흰
+      // 화면이 한 프레임 번쩍입니다(스타일이 먼저 그려지고 클래스는 나중에 붙으므로).
+      // lib/theme.ts 의 readTheme() 과 같은 규칙: 저장된 선택 > OS 설정.
+      ;(function () {
+        var stored = localStorage.getItem('openforms.theme')
+        var dark =
+          stored === 'dark' ||
+          (stored === null && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        if (dark) document.documentElement.classList.add('dark')
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

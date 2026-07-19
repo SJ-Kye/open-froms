@@ -1,0 +1,79 @@
+/*
+ * 디자인 토큰. 색·타이포·모서리·전환을 여기 한 곳에서만 정의하고, 나머지 CSS 는 var() 로만
+ * 참조합니다. 화면이 늘어나도 색을 고르는 자리는 이 파일 하나입니다.
+ *
+ * 다크 모드는 <html class="dark"> 로 전환합니다. 미디어 쿼리(prefers-color-scheme)만 쓰면
+ * 사용자가 선택을 바꿀 수 없고, 클래스만 쓰면 첫 방문에 OS 설정을 무시하게 되므로 —
+ * 초기값은 OS 설정에서 읽고 이후 선택은 클래스로 덮어씁니다(lib/theme.ts).
+ */
+
+:root {
+  color-scheme: light;
+
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f5f9;
+
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --glass-shadow: rgba(31, 38, 135, 0.06);
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+
+  --accent-primary: #f59e0b;
+  --accent-secondary: #f97316;
+  --accent-hover: #d97706;
+  --accent-gradient: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+  --accent-glow: rgba(245, 158, 11, 0.15);
+
+  --border-color: #e2e8f0;
+  --success: #10b981;
+  --error: #ef4444;
+  --warning: #f59e0b;
+
+  /* 상태 배경은 색상 토큰과 별도로 둡니다. 색만 바꿔도 배경 투명도가 따라오도록. */
+  --error-bg: rgba(239, 68, 68, 0.1);
+  --error-border: rgba(239, 68, 68, 0.25);
+  --success-bg: rgba(16, 185, 129, 0.1);
+
+  --font-heading: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:root.dark {
+  color-scheme: dark;
+
+  --bg-primary: #090d16;
+  --bg-secondary: #0f172a;
+  --bg-tertiary: #1e293b;
+
+  --glass-bg: rgba(15, 23, 42, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: rgba(0, 0, 0, 0.35);
+
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+
+  --accent-primary: #fbbf24;
+  --accent-secondary: #fb923c;
+  --accent-hover: #f59e0b;
+  --accent-glow: rgba(251, 191, 36, 0.25);
+
+  --border-color: #1e293b;
+  --success: #34d399;
+  --error: #f87171;
+  --warning: #fbbf24;
+
+  --error-bg: rgba(248, 113, 113, 0.12);
+  --error-border: rgba(248, 113, 113, 0.3);
+  --success-bg: rgba(52, 211, 153, 0.12);
+}
