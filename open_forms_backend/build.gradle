@@ -47,4 +47,10 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+
+	// ApiContractConsistencyTest 는 프로젝트 밖의 docs/05-api-design.md 를 읽습니다. 입력으로 선언하지
+	// 않으면 문서만 고쳤을 때 test 태스크가 UP-TO-DATE 로 건너뛰어, 어긋난 문서가 통과한 것처럼 보입니다.
+	inputs.file(file('../docs/05-api-design.md'))
+			.withPropertyName('apiDesignDoc')
+			.withPathSensitivity(PathSensitivity.RELATIVE)
 }
