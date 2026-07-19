@@ -1,5 +1,6 @@
 package com.openforms.response.controller;
 
+import com.openforms.common.openapi.OwnedResourceErrors;
 import com.openforms.common.response.PageResponse;
 import com.openforms.response.dto.FormSummaryStats;
 import com.openforms.response.dto.ResponseDetailResponse;
@@ -7,6 +8,7 @@ import com.openforms.response.dto.ResponseSummaryItem;
 import com.openforms.response.service.FormSummaryService;
 import com.openforms.response.service.ResponseQueryService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springdoc.core.annotations.ParameterObject;
@@ -45,6 +47,8 @@ public class ResponseController {
     }
 
     @Operation(summary = "응답 목록", description = "폼의 응답을 최신순으로 조회합니다. 항목마다 답한 문항 수를 포함합니다.")
+    @ApiResponse(responseCode = "200", description = "응답 페이지 envelope")
+    @OwnedResourceErrors
     @GetMapping("/responses")
     public PageResponse<ResponseSummaryItem> list(@PathVariable Long formId,
             @ParameterObject @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
@@ -54,6 +58,8 @@ public class ResponseController {
     }
 
     @Operation(summary = "응답 상세", description = "문항별 답변을 질문 순서대로 반환합니다(무응답 문항 포함).")
+    @ApiResponse(responseCode = "200", description = "문항별 답변")
+    @OwnedResourceErrors
     @GetMapping("/responses/{responseId}")
     public ResponseDetailResponse get(@PathVariable Long formId, @PathVariable Long responseId,
             Authentication authentication) {
@@ -61,6 +67,8 @@ public class ResponseController {
     }
 
     @Operation(summary = "응답 삭제", description = "응답과 그 답변을 함께 삭제합니다. 되돌릴 수 없습니다.")
+    @ApiResponse(responseCode = "204", description = "삭제됨 (본문 없음)")
+    @OwnedResourceErrors
     @DeleteMapping("/responses/{responseId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long formId, @PathVariable Long responseId,
@@ -70,6 +78,8 @@ public class ResponseController {
 
     @Operation(summary = "대시보드 집계",
             description = "총 응답·완료율·일별 추이·문항별 분포를 한 번에 반환합니다.")
+    @ApiResponse(responseCode = "200", description = "대시보드 집계")
+    @OwnedResourceErrors
     @GetMapping("/summary")
     public FormSummaryStats summary(@PathVariable Long formId, Authentication authentication) {
         return formSummaryService.summarize(formId, authentication.getName());

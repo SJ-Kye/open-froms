@@ -1,9 +1,13 @@
 package com.openforms.response.controller;
 
+import com.openforms.common.exception.ErrorResponse;
 import com.openforms.response.dto.SubmitResponseRequest;
 import com.openforms.response.dto.SubmitResponseResult;
 import com.openforms.response.service.ResponseSubmissionService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -34,6 +38,17 @@ public class PublicResponseController {
 
     @Operation(summary = "응답 제출",
             description = "발행된 폼에 익명으로 응답합니다. 미발행·없는 slug 는 404, 종료된 폼은 409 입니다.")
+    @ApiResponse(responseCode = "201", description = "접수됨 (responseId·submittedAt)")
+    @ApiResponse(responseCode = "400", description = "검증 실패 (VALIDATION_FAILED · REQUIRED_ANSWER_MISSING · "
+            + "UNKNOWN_QUESTION · DUPLICATE_ANSWER · INVALID_ANSWER_VALUE · ANSWER_OUT_OF_RANGE)",
+            content = @Content(mediaType = "application/json",
+                    schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "없는 slug 이거나 아직 발행되지 않음 (FORM_NOT_FOUND)",
+            content = @Content(mediaType = "application/json",
+                    schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "종료된 폼에 제출 (FORM_CLOSED)",
+            content = @Content(mediaType = "application/json",
+                    schema = @Schema(implementation = ErrorResponse.class)))
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public SubmitResponseResult submit(@PathVariable String slug,
