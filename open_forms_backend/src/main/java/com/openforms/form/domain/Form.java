@@ -14,6 +14,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -45,6 +46,14 @@ public class Form extends AuditableEntity {
 
     @Column(name = "slug", nullable = false, unique = true, length = 64)
     private String slug;
+
+    /** 발행 시각입니다. 아직 발행하지 않았으면 null 이며, 일별 응답 추이의 시작점이 됩니다. */
+    @Column(name = "published_at")
+    private LocalDateTime publishedAt;
+
+    /** 종료 시각입니다. 아직 종료하지 않았으면 null 이며, 일별 응답 추이의 끝점이 됩니다. */
+    @Column(name = "closed_at")
+    private LocalDateTime closedAt;
 
     public Form(User user, String title, String description, String slug) {
         this.user = user;
