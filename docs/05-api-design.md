@@ -206,8 +206,52 @@
 ```
 응답 `200 OK`
 ```json
-{ "accessToken": "eyJhbGciOiJIUzM4NCJ9....", "tokenType": "Bearer", "expiresIn": 3600 }
+{
+  "accessToken": "eyJhbGciOiJIUzM4NCJ9....",
+  "refreshToken": "wmxing9vl4sjIeN9NUVPilJtGl4msHUNYGIquJd0FKU",
+  "tokenType": "Bearer",
+  "expiresIn": 3600
+}
 ```
+`refreshToken` 은 서명 토큰이 아니라 **의미 없는 256비트 난수**입니다(URL-safe Base64, 43자). 값 자체에 정보를 담지 않으므로 JWT 와 달리 디코딩해도 얻을 수 있는 것이 없습니다. 서버는 이 값의 SHA-256 해시만 보관하며 원문은 이 응답에만 존재합니다.
+
+### 토큰 갱신 — POST /api/auth/refresh 🔓
+요청
+```json
+{ "refreshToken": "wmxing9vl4sjIeN9NUVPilJtGl4msHUNYGIquJd0FKU" }
+```
+응답 `200 OK` — 응답 형태는 로그인과 같으며, **`refreshToken` 은 항상 새 값**입니다.
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzM4NCJ9....",
+  "refreshToken": "P1h59na65Lr-z94cE7bN4GbJqip3naoGbYIZXpSPzwM",
+  "tokenType": "Bearer",
+  "expiresIn": 3600
+}
+```
+실행 중 확인한 사항이 하나 있습니다. **직전 발급과 같은 초에 갱신하면 `accessToken` 이 문자열까지 동일합니다.** JWT 의 페이로드가 subject·iat·exp 뿐이고 iat/exp 의 해상도가 초라서, 같은 사용자가 같은 초에 발급받으면 서명까지 같은 값이 나옵니다. 1초만 지나도 달라지며 유효성에는 영향이 없지만, 갱신 직후 토큰이 그대로인 것처럼 보일 수 있어 적어 둡니다.
+
+이미 회전된 토큰을 다시 보내면 `401` 이며, 이때 그 사용자의 리프레시 토큰이 **전부** 폐기됩니다.
+```json
+{
+  "timestamp": "2026-07-19T10:33:52.853367Z",
+  "status": 401,
+  "error": "Unauthorized",
+  "code": "INVALID_REFRESH_TOKEN",
+  "message": "리프레시 토큰이 유효하지 않습니다. 다시 로그인해 주세요.",
+  "path": "/api/auth/refresh",
+  "traceId": "be44b5c9-1b34-4d02-9775-71df020bafa9",
+  "fieldErrors": []
+}
+```
+빈 값이면 형식 검증에서 먼저 걸립니다 — `400 VALIDATION_FAILED`, `fieldErrors: [{ "field": "refreshToken", "message": "공백일 수 없습니다" }]`.
+
+### 로그아웃 — POST /api/auth/logout 🔓
+요청
+```json
+{ "refreshToken": "P1h59na65Lr-z94cE7bN4GbJqip3naoGbYIZXpSPzwM" }
+```
+응답 `204 No Content` (본문 없음). 같은 요청을 반복해도 `204` 이며, 이후 그 토큰으로 갱신하면 `401 INVALID_REFRESH_TOKEN` 입니다.
 
 ### 폼 생성 — POST /api/forms 🔒
 요청
@@ -572,9 +616,11 @@
 
 ## 인증 필요/불필요 요약
 
-- 🔓 **불필요**: `/api/auth/register`, `/api/auth/login`, `/api/public/**`, Swagger UI 및 OpenAPI 문서
+- 🔓 **불필요**: `/api/auth/register`, `/api/auth/login`, `/api/auth/refresh`, `/api/auth/logout`, `/api/public/**`, Swagger UI 및 OpenAPI 문서
 - 🔒 **필요**: 그 외 전부 (`/api/auth/me`, `/api/forms/**`)
 - 🔒 중 **소유자만**: 폼·질문·응답·집계 — 소유자가 아니면 403
+
+`/api/auth/**` 를 통째로 열지 않고 네 경로만 나열한 것은 `/me` 때문입니다. 와일드카드로 열면 `/me` 가 미인증으로 통과해 주체 없이 호출됩니다. 갱신·로그아웃이 익명 허용인 것은 앞서 적은 대로 두 API 의 자격증명이 리프레시 토큰 자체이기 때문입니다.
 
 인증은 **무상태 JWT** 입니다. 서버가 세션을 들고 있지 않으므로 요청마다 `Authorization` 헤더로 주체를 판별하며, 공개 응답 경로는 이 헤더 없이 동작합니다. `/api/public/**` 전체를 익명 허용으로 두어도 안전한 이유는, 이 경로가 다루는 리소스가 **발행된 폼과 그 폼에 대한 신규 응답뿐**이기 때문입니다. 수집된 응답을 읽는 경로는 공개 경로에 두지 않습니다.
 
