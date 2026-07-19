@@ -1,48 +1,58 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Check, Copy, Info, ListPlus, Lock } from 'lucide-react'
+import { Check, Copy, Lock, Plus } from 'lucide-react'
 import ConfirmDialog from '../../components/ConfirmDialog'
-import EmptyState from '../../components/EmptyState'
 import ErrorBanner from '../../components/ErrorBanner'
 import Spinner from '../../components/Spinner'
+import { useToast } from '../../components/useToast'
 import { toApiError, type ApiError } from '../../lib/apiError'
-import type { QuestionResponse } from '../../types/api'
+import type { QuestionResponse, QuestionType } from '../../types/api'
 import QuestionCard from './QuestionCard'
-import QuestionEditor from './QuestionEditor'
-import { STATUS_LABELS, nextStatus } from './formStatus'
-import { emptyDraft, toDraft, toRequest, type QuestionDraft } from './questionDraft'
+import QuickAddPanel from './QuickAddPanel'
+import { STATUS_LABELS } from './formStatus'
+import { emptyDraft, isDirty, toDraft, toRequest, type QuestionDraft } from './questionDraft'
 import {
   useCreateQuestionMutation,
   useDeleteQuestionMutation,
   useFormQuery,
+  useReorderQuestionsMutation,
   useUpdateFormMutation,
   useUpdateQuestionMutation,
 } from './useForms'
 import styles from './FormBuilderPage.module.css'
 
-/** 편집 중인 질문의 대상입니다. `new` 는 추가, 숫자는 그 id 의 질문 수정입니다. */
-type EditTarget = { mode: 'new' } | { mode: 'edit'; question: QuestionResponse } | null
-
+/**
+ * 폼 편집 화면입니다. 문항은 모드 전환 없이 **바로 편집**되고, 저장은 카드 단위입니다(서버 API 가
+ * 문항 단위이므로 — 여러 문항을 한 번에 보내면 중간에 하나가 400 일 때 어디까지 저장됐는지
+ * 알 수 없습니다).
+ */
 export default function FormBuilderPage() {
   const { id } = useParams()
   const formId = Number(id)
+  const showToast = useToast()
 
   const { data: form, isPending, isError, error } = useFormQuery(formId)
   const updateForm = useUpdateFormMutation(formId)
   const createQuestion = useCreateQuestionMutation(formId)
   const updateQuestion = useUpdateQuestionMutation(formId)
   const deleteQuestion = useDeleteQuestionMutation(formId)
+  const reorderQuestions = useReorderQuestionsMutation(formId)
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [editTarget, setEditTarget] = useState<EditTarget>(null)
-  const [draft, setDraft] = useState<QuestionDraft>(emptyDraft)
-  const [questionError, setQuestionError] = useState<ApiError | null>(null)
+  /** 저장된 문항의 편집 상태입니다(질문 id → 초안). */
+  const [drafts, setDrafts] = useState<Record<number, QuestionDraft>>({})
+  /** 아직 저장하지 않은 새 문항입니다. 한 번에 하나만 둡니다(addQuestion 주석 참고). */
+  const [newDraft, setNewDraft] = useState<QuestionDraft | null>(null)
+  const [savingId, setSavingId] = useState<number | 'new' | null>(null)
+  const [cardErrors, setCardErrors] = useState<Record<string, ApiError>>({})
   const [pendingDelete, setPendingDelete] = useState<QuestionResponse | null>(null)
   const [copied, setCopied] = useState(false)
 
-  // 서버에서 받은 값으로 입력칸을 채웁니다. 폼이 바뀔 때만 덮어써야, 사용자가 타이핑하는 도중
-  // 백그라운드 리페치가 입력을 되돌리는 일이 생기지 않습니다.
+  const questions = form?.questions
+
+  // 서버 값으로 폼 정보를 채웁니다. 폼이 바뀔 때만 덮어써야 타이핑 도중 리페치가 입력을 되돌리지
+  // 않습니다.
   useEffect(() => {
     if (form) {
       setTitle(form.title)
@@ -50,69 +60,107 @@ export default function FormBuilderPage() {
     }
   }, [form?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 문항 목록이 바뀌면 초안을 맞추되 **이미 있는 초안은 유지**합니다. 한 카드를 저장하면 목록이
+  // 갱신되는데, 그때 다른 카드에서 편집 중이던 내용까지 날아가면 안 됩니다.
+  useEffect(() => {
+    if (!questions) {
+      return
+    }
+    setDrafts((previous) => {
+      const next: Record<number, QuestionDraft> = {}
+      for (const question of questions) {
+        next[question.id] = previous[question.id] ?? toDraft(question)
+      }
+      return next
+    })
+  }, [questions])
+
   if (isPending) {
     return <Spinner page />
   }
   if (isError) {
     const apiError = toApiError(error)
-    return (
-      <ErrorBanner message={apiError.message} traceId={apiError.traceId} />
-    )
+    return <ErrorBanner message={apiError.message} traceId={apiError.traceId} />
   }
 
-  // 위 가드로 로드가 끝났음이 확정된 값입니다. 아래 콜백들은 렌더 이후에 실행되어 좁혀진 타입이
-  // 유지되지 않으므로, 여기서 한 번 붙잡아 둡니다.
   const loaded = form
-
   // 질문 편집은 DRAFT 에서만 가능합니다(서버 409 FORM_NOT_EDITABLE). 제목·설명은 발행 후에도
   // 고칠 수 있습니다 — 수집된 응답의 의미를 바꾸지 않기 때문입니다.
   const questionsEditable = form.status === 'DRAFT'
-  const detailsDirty = title !== form.title && title.trim() !== ''
-  const descriptionDirty = description !== (form.description ?? '')
-  const dirty = detailsDirty || descriptionDirty
-  const target = nextStatus(form.status)
+  const detailsDirty =
+    (title !== form.title && title.trim() !== '') || description !== (form.description ?? '')
   const publicUrl = `${window.location.origin}/f/${form.slug}`
+  const draftOf = (question: QuestionResponse) => drafts[question.id] ?? toDraft(question)
 
-  function startAdd() {
-    setDraft(emptyDraft())
-    setQuestionError(null)
-    setEditTarget({ mode: 'new' })
-  }
-
-  function startEdit(question: QuestionResponse) {
-    setDraft(toDraft(question))
-    setQuestionError(null)
-    setEditTarget({ mode: 'edit', question })
+  /**
+   * 새 문항 카드를 띄웁니다. 서버에 즉시 만들지 않는 이유는 제목이 `@NotBlank` 라 빈 질문 POST 가
+   * 400 이기 때문입니다.
+   *
+   * <p>미저장 카드는 하나로 제한합니다. 여러 개를 띄우면 position 배정이 모호해지고, 저장하지 않은
+   * 채 화면을 떠나면 만든 줄 알았던 문항이 조용히 사라집니다. 이미 카드가 떠 있으면 유형만 바꿉니다.
+   */
+  function addQuestion(type: QuestionType) {
+    setNewDraft((current) => (current ? { ...current, type } : emptyDraft(type)))
+    setCardErrors(({ new: _dropped, ...rest }) => rest)
   }
 
   async function saveDetails() {
     try {
       await updateForm.mutateAsync({ title: title.trim(), description })
+      showToast('폼 정보를 저장했습니다.')
     } catch {
-      // 오류는 뮤테이션 상태로 배너에 표시합니다.
+      // 실패 사유는 배너로 남깁니다(토스트는 사라지므로 조치가 필요한 정보에 부적합).
     }
   }
 
-  async function saveQuestion() {
-    if (!editTarget) {
+  async function saveQuestion(question: QuestionResponse | null, draft: QuestionDraft) {
+    const key = question ? String(question.id) : 'new'
+    setSavingId(question ? question.id : 'new')
+    setCardErrors(({ [key]: _dropped, ...rest }) => rest)
+    try {
+      if (question) {
+        // 수정은 순서를 바꾸지 않으므로 원래 position 을 유지합니다.
+        const saved = await updateQuestion.mutateAsync({
+          questionId: question.id,
+          input: toRequest(draft, question.position),
+        })
+        // 서버가 다듬은 값(공백 제거·빈 선택지 제외)으로 되돌려 놓아야 카드가 계속 «수정됨» 으로
+        // 남지 않습니다.
+        setDrafts((previous) => ({ ...previous, [saved.id]: toDraft(saved) }))
+        showToast('문항을 저장했습니다.')
+      } else {
+        await createQuestion.mutateAsync(toRequest(draft, loaded.questions.length + 1))
+        setNewDraft(null)
+        showToast('문항을 추가했습니다.')
+      }
+    } catch (caught) {
+      // 저장에 실패해도 입력을 지우지 않습니다. 방금 쓴 내용을 잃으면 다시 써야 합니다.
+      setCardErrors((previous) => ({ ...previous, [key]: toApiError(caught) }))
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  /**
+   * 인접한 두 문항의 position 을 맞바꿉니다.
+   *
+   * <p>`questions` 에 (form_id, position) 유니크 제약이 없어(V1__init.sql) 교체 도중 값이 잠시 겹쳐도
+   * 무방합니다. 조회가 position 오름차순이라 두 번의 PUT 이 끝나면 순서가 그대로 반영됩니다.
+   */
+  async function moveQuestion(index: number, direction: -1 | 1) {
+    const target = index + direction
+    if (target < 0 || target >= loaded.questions.length) {
       return
     }
-    setQuestionError(null)
+    const moving = loaded.questions[index]
+    const swapped = loaded.questions[target]
     try {
-      if (editTarget.mode === 'new') {
-        // position 은 1-기반이며 목록 끝에 붙입니다(서버 @Positive).
-        await createQuestion.mutateAsync(toRequest(draft, loaded.questions.length + 1))
-      } else {
-        await updateQuestion.mutateAsync({
-          questionId: editTarget.question.id,
-          // 수정은 순서를 바꾸지 않으므로 원래 position 을 유지합니다.
-          input: toRequest(draft, editTarget.question.position),
-        })
-      }
-      setEditTarget(null)
+      await reorderQuestions.mutateAsync({
+        first: { id: moving.id, input: toRequest(draftOf(moving), swapped.position) },
+        second: { id: swapped.id, input: toRequest(draftOf(swapped), moving.position) },
+      })
     } catch (caught) {
-      // 저장 실패 시 편집기를 닫지 않습니다. 닫으면 사용자가 방금 입력한 내용을 잃습니다.
-      setQuestionError(toApiError(caught))
+      setCardErrors((previous) => ({ ...previous, [String(moving.id)]: toApiError(caught) }))
     }
   }
 
@@ -122,165 +170,159 @@ export default function FormBuilderPage() {
     }
     await deleteQuestion.mutateAsync(pendingDelete.id)
     setPendingDelete(null)
+    showToast('문항을 삭제했습니다.')
   }
 
   async function copyLink() {
     await navigator.clipboard.writeText(publicUrl)
     setCopied(true)
+    showToast('공개 링크를 복사했습니다.')
     window.setTimeout(() => setCopied(false), 2000)
   }
 
   return (
-    <div>
-      {!questionsEditable && (
-        <div className={`banner ${styles.notice}`} style={{ background: 'var(--bg-tertiary)' }}>
-          <Lock size={18} style={{ flexShrink: 0 }} />
-          <span>
-            {STATUS_LABELS[form.status]} 상태에서는 질문을 수정할 수 없습니다. 이미 수집된 응답과
-            질문이 어긋나는 것을 막기 위해서입니다. 제목과 설명은 계속 수정할 수 있습니다.
-          </span>
-        </div>
-      )}
-
-      {target === 'PUBLISHED' && form.questions.length === 0 && (
-        <div className={`banner ${styles.notice}`} style={{ background: 'var(--bg-tertiary)' }}>
-          <Info size={18} style={{ flexShrink: 0 }} />
-          <span>질문을 하나 이상 추가해야 발행할 수 있습니다.</span>
-        </div>
-      )}
-
-      <section className="card">
-        <h2 style={{ fontSize: '1.05rem', marginBottom: 16 }}>폼 정보</h2>
-
-        {updateForm.isError && (
-          <div style={{ marginBottom: 16 }}>
-            <ErrorBanner {...bannerProps(updateForm.error)} />
+    <div className={styles.layout}>
+      <div className={styles.main}>
+        <section className={`card ${styles.infoCard}`}>
+          <div className={styles.infoHead}>
+            <input
+              type="text"
+              className={styles.titleInput}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              disabled={updateForm.isPending}
+              maxLength={255}
+              placeholder="제목 없는 폼"
+              aria-label="폼 제목"
+            />
+            {/* 저장 버튼은 입력을 끝낸 시선이 바로 닿도록 카드 우상단에 둡니다. */}
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => void saveDetails()}
+              disabled={!detailsDirty || updateForm.isPending}
+              style={{ flexShrink: 0 }}
+            >
+              {updateForm.isPending && <Spinner size={14} />}
+              저장
+            </button>
           </div>
-        )}
 
-        <div className="form-group">
-          <label className="form-label" htmlFor="form-title">
-            제목
-          </label>
-          <input
-            id="form-title"
-            type="text"
-            className="input-field"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            disabled={updateForm.isPending}
-            maxLength={255}
-          />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label" htmlFor="form-description">
-            설명 <span className={styles.muted}>(선택)</span>
-          </label>
           <textarea
-            id="form-description"
-            className="input-field"
-            rows={3}
-            placeholder="응답자에게 보여 줄 안내 문구입니다."
+            className={styles.descriptionInput}
+            rows={2}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             disabled={updateForm.isPending}
             maxLength={1000}
+            placeholder="응답자에게 보여 줄 설명을 적어 주세요. (선택)"
+            aria-label="폼 설명"
           />
+
+          {updateForm.isError && (
+            <div style={{ marginTop: 14 }}>
+              <ErrorBanner {...toBanner(updateForm.error)} />
+            </div>
+          )}
+
+          {/* 링크는 발행 이후에만 의미가 있습니다. DRAFT 의 slug 로 열면 응답자는 404 를 봅니다. */}
+          {form.status !== 'DRAFT' && (
+            <div className={styles.shareRow}>
+              <code className={styles.shareLink}>{publicUrl}</code>
+              <button type="button" className="btn btn-secondary" onClick={() => void copyLink()}>
+                {copied ? <Check size={15} /> : <Copy size={15} />}
+                링크 복사
+              </button>
+            </div>
+          )}
+        </section>
+
+        {deleteQuestion.isError && <ErrorBanner {...toBanner(deleteQuestion.error)} />}
+
+        <div className={styles.sectionHead}>
+          <h2 className={styles.sectionTitle}>
+            질문 <span className={styles.muted}>{form.questions.length}개</span>
+          </h2>
+          {/* 편집이 막힌 이유는 그 제약이 적용되는 자리(질문 섹션) 옆에 둡니다. */}
+          {!questionsEditable && (
+            <span className={styles.lockNote}>
+              <Lock size={13} />
+              {STATUS_LABELS[form.status]} 상태에서는 수정할 수 없습니다 — 수집된 응답과 어긋나기
+              때문입니다.
+            </span>
+          )}
         </div>
 
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => void saveDetails()}
-          disabled={!dirty || updateForm.isPending}
-        >
-          {updateForm.isPending && <Spinner size={14} />}
-          {dirty ? '변경 사항 저장' : '저장됨'}
-        </button>
-
-        {/* 링크는 발행 이후에만 의미가 있습니다. DRAFT 의 slug 로 열면 응답자는 404 를 봅니다. */}
-        {form.status !== 'DRAFT' && (
-          <div className={styles.shareRow}>
-            <code className={styles.shareLink}>{publicUrl}</code>
-            <button type="button" className="btn btn-secondary" onClick={() => void copyLink()}>
-              {copied ? <Check size={15} /> : <Copy size={15} />}
-              {copied ? '복사됨' : '링크 복사'}
-            </button>
-          </div>
-        )}
-      </section>
-
-      <div className={styles.sectionHead}>
-        <h2 style={{ fontSize: '1.05rem' }}>질문 {form.questions.length}개</h2>
-        {questionsEditable && editTarget === null && (
-          <button type="button" className="btn btn-secondary" onClick={startAdd}>
-            <ListPlus size={16} />
-            질문 추가
-          </button>
-        )}
-      </div>
-
-      {deleteQuestion.isError && (
-        <div style={{ marginBottom: 16 }}>
-          <ErrorBanner {...bannerProps(deleteQuestion.error)} />
-        </div>
-      )}
-      <div className={styles.questions}>
-        {form.questions.length === 0 && editTarget === null && (
-          <div className="card">
-            <EmptyState
-              title="아직 질문이 없습니다"
-              description={
-                questionsEditable
-                  ? '질문을 추가하면 응답자에게 보여집니다.'
-                  : '질문 없이 발행된 폼입니다.'
-              }
-              action={
-                questionsEditable ? (
-                  <button type="button" className="btn btn-primary" onClick={startAdd}>
-                    <ListPlus size={16} />첫 질문 추가
-                  </button>
-                ) : undefined
-              }
-            />
-          </div>
-        )}
-
-        {form.questions.map((question, index) =>
-          editTarget?.mode === 'edit' && editTarget.question.id === question.id ? (
-            <QuestionEditor
-              key={question.id}
-              draft={draft}
-              onChange={setDraft}
-              onSave={() => void saveQuestion()}
-              onCancel={() => setEditTarget(null)}
-              saving={updateQuestion.isPending}
-              error={questionError}
-            />
-          ) : (
+        <div className={styles.questions}>
+          {form.questions.map((question, index) => (
             <QuestionCard
               key={question.id}
               question={question}
+              draft={draftOf(question)}
               index={index}
-              editable={questionsEditable && editTarget === null}
-              onEdit={() => startEdit(question)}
+              total={form.questions.length}
+              editable={questionsEditable}
+              saving={savingId === question.id || reorderQuestions.isPending}
+              error={cardErrors[String(question.id)] ?? null}
+              dirty={isDirty(draftOf(question), question)}
+              onDraftChange={(draft) =>
+                setDrafts((previous) => ({ ...previous, [question.id]: draft }))
+              }
+              onSave={() => void saveQuestion(question, draftOf(question))}
+              onRevert={() =>
+                setDrafts((previous) => ({ ...previous, [question.id]: toDraft(question) }))
+              }
               onDelete={() => setPendingDelete(question)}
+              onMove={(direction) => void moveQuestion(index, direction)}
             />
-          ),
-        )}
+          ))}
 
-        {editTarget?.mode === 'new' && (
-          <QuestionEditor
-            draft={draft}
-            onChange={setDraft}
-            onSave={() => void saveQuestion()}
-            onCancel={() => setEditTarget(null)}
-            saving={createQuestion.isPending}
-            error={questionError}
-          />
-        )}
+          {newDraft && (
+            <QuestionCard
+              question={null}
+              draft={newDraft}
+              index={form.questions.length}
+              total={form.questions.length + 1}
+              editable
+              saving={savingId === 'new'}
+              error={cardErrors.new ?? null}
+              dirty
+              onDraftChange={setNewDraft}
+              onSave={() => void saveQuestion(null, newDraft)}
+              onRevert={() => setNewDraft(null)}
+              onDelete={() => setNewDraft(null)}
+              onMove={() => undefined}
+            />
+          )}
+
+          {questionsEditable && !newDraft && (
+            <button
+              type="button"
+              className={`btn ${styles.addButton}`}
+              onClick={() => addQuestion('SHORT_TEXT')}
+            >
+              <Plus size={17} />
+              질문 추가
+            </button>
+          )}
+
+          {!questionsEditable && form.questions.length === 0 && (
+            <div className="card">
+              <p className={styles.muted} style={{ padding: '20px 0', textAlign: 'center' }}>
+                질문 없이 발행된 폼입니다.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
+
+      {questionsEditable && (
+        <QuickAddPanel
+          onAdd={addQuestion}
+          activeType={newDraft?.type ?? null}
+          disabled={savingId !== null}
+        />
+      )}
 
       <ConfirmDialog
         open={pendingDelete !== null}
@@ -292,12 +334,11 @@ export default function FormBuilderPage() {
         onConfirm={() => void confirmDelete()}
         onCancel={() => setPendingDelete(null)}
       />
-
     </div>
   )
 }
 
-function bannerProps(error: unknown) {
+function toBanner(error: unknown) {
   const apiError = toApiError(error)
   return { message: apiError.message, traceId: apiError.traceId }
 }

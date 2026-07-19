@@ -1,3 +1,15 @@
+import {
+  AlignLeft,
+  CalendarDays,
+  CheckSquare,
+  ChevronDownSquare,
+  CircleDot,
+  Clock,
+  Hash,
+  Star,
+  Type,
+  type LucideIcon,
+} from 'lucide-react'
 import type { QuestionType } from '../../types/api'
 
 /**
@@ -7,10 +19,14 @@ import type { QuestionType } from '../../types/api'
  * 규칙이 양쪽에 존재하는 것은 중복이지만, 없으면 빌더가 선택형에 선택지 입력칸을 언제 보여 줄지
  * 알 수 없어 사용자가 저장 버튼을 눌러야만 400 으로 배우게 됩니다. 대신 **검증의 최종 권한은
  * 서버**이고 화면은 안내만 담당한다는 경계를 지킵니다.
+ *
+ * <p>`icon` 은 빠른 추가 버튼과 카드 헤더가 공유합니다. 같은 유형이 어디서나 같은 아이콘으로
+ * 보여야 사용자가 목록과 카드를 눈으로 연결할 수 있습니다.
  */
 export interface QuestionTypeMeta {
   value: QuestionType
   label: string
+  icon: LucideIcon
   /** 선택지를 갖는 타입인지 여부입니다(선택지 2개 이상 필수). */
   isChoice: boolean
   /** minValue~maxValue 범위 메타를 쓰는 타입인지 여부입니다. */
@@ -20,15 +36,15 @@ export interface QuestionTypeMeta {
 }
 
 export const QUESTION_TYPES: QuestionTypeMeta[] = [
-  { value: 'SHORT_TEXT', label: '단답형', isChoice: false, hasRange: false, hint: '한 줄 텍스트' },
-  { value: 'LONG_TEXT', label: '장문형', isChoice: false, hasRange: false, hint: '여러 줄 텍스트' },
-  { value: 'SINGLE_CHOICE', label: '객관식(택1)', isChoice: true, hasRange: false, hint: '라디오 버튼' },
-  { value: 'DROPDOWN', label: '드롭다운', isChoice: true, hasRange: false, hint: '목록에서 하나 선택' },
-  { value: 'MULTIPLE_CHOICE', label: '체크박스(택N)', isChoice: true, hasRange: false, hint: '여러 개 선택 가능' },
-  { value: 'RATING', label: '평점', isChoice: false, hasRange: true, hint: '척도 버튼(예: 1~5)' },
-  { value: 'NUMBER', label: '숫자', isChoice: false, hasRange: true, hint: '숫자 입력' },
-  { value: 'DATE', label: '날짜', isChoice: false, hasRange: false, hint: '날짜 선택' },
-  { value: 'TIME', label: '시각', isChoice: false, hasRange: false, hint: '시각 선택' },
+  { value: 'SHORT_TEXT', label: '단답형', icon: Type, isChoice: false, hasRange: false, hint: '한 줄 텍스트' },
+  { value: 'LONG_TEXT', label: '장문형', icon: AlignLeft, isChoice: false, hasRange: false, hint: '여러 줄 텍스트' },
+  { value: 'SINGLE_CHOICE', label: '객관식(택1)', icon: CircleDot, isChoice: true, hasRange: false, hint: '라디오 버튼' },
+  { value: 'DROPDOWN', label: '드롭다운', icon: ChevronDownSquare, isChoice: true, hasRange: false, hint: '목록에서 하나 선택' },
+  { value: 'MULTIPLE_CHOICE', label: '체크박스(택N)', icon: CheckSquare, isChoice: true, hasRange: false, hint: '여러 개 선택 가능' },
+  { value: 'RATING', label: '평점', icon: Star, isChoice: false, hasRange: true, hint: '척도 버튼(예: 1~5)' },
+  { value: 'NUMBER', label: '숫자', icon: Hash, isChoice: false, hasRange: true, hint: '숫자 입력' },
+  { value: 'DATE', label: '날짜', icon: CalendarDays, isChoice: false, hasRange: false, hint: '날짜 선택' },
+  { value: 'TIME', label: '시각', icon: Clock, isChoice: false, hasRange: false, hint: '시각 선택' },
 ]
 
 const BY_VALUE = new Map(QUESTION_TYPES.map((meta) => [meta.value, meta]))

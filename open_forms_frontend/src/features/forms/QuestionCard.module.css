@@ -1,11 +1,24 @@
 .card {
   padding: 18px 20px;
+  /* 편집 중인 카드를 왼쪽 띠로 표시합니다(평소에는 투명이라 레이아웃이 흔들리지 않습니다). */
+  border-left: 4px solid transparent;
+}
+
+.cardDirty {
+  border-left-color: var(--accent-primary);
+}
+
+.cardNew {
+  border-left-color: var(--accent-primary);
+  box-shadow: 0 0 0 4px var(--accent-glow);
 }
 
 .head {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
 }
 
 .index {
@@ -13,8 +26,8 @@
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: var(--bg-tertiary);
-  color: var(--text-secondary);
+  background: var(--accent-glow);
+  color: var(--accent-hover);
   font-size: 0.8rem;
   font-weight: 700;
   display: inline-flex;
@@ -22,12 +35,197 @@
   justify-content: center;
 }
 
-.headText {
-  flex: 1;
-  min-width: 0;
+.moveGroup {
+  display: flex;
+  gap: 1px;
 }
 
-.title {
+.iconButton {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 5px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  transition: var(--transition-smooth);
+}
+
+.iconButton:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+}
+
+.iconButton:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.danger:hover:not(:disabled) {
+  color: var(--error);
+  background: var(--error-bg);
+}
+
+.headRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.typePicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+}
+
+.typeSelect {
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+}
+
+.titleInput {
+  width: 100%;
+  padding: 8px 0;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  outline: none;
+  transition: var(--transition-smooth);
+}
+
+.titleInput:focus {
+  border-bottom-color: var(--accent-primary);
+}
+
+.titleInput::placeholder {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.titleInput.invalid {
+  border-bottom-color: var(--error);
+}
+
+.hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+.section {
+  margin-top: 16px;
+}
+
+.sectionLabel {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.optionRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.optionBullet {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  width: 14px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.optionInput {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 0.88rem;
+}
+
+.rangeRow {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.rangeField {
+  flex: 1 1 140px;
+}
+
+.rangeLabel {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-primary);
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.problem {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.footerActions .btn {
+  padding: 7px 14px;
+  font-size: 0.85rem;
+}
+
+/* ── 읽기 전용(발행·마감된 폼) ── */
+
+.readonlyTitle {
   font-weight: 600;
   color: var(--text-primary);
   word-break: break-word;
@@ -38,27 +236,21 @@
   margin-left: 4px;
 }
 
-.meta {
+.readonlyMeta {
   font-size: 0.8rem;
   color: var(--text-muted);
   margin-top: 4px;
 }
 
-.actions {
-  display: flex;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
-.options {
+.readonlyOptions {
   list-style: none;
-  margin: 12px 0 0 38px;
+  margin: 12px 0 0 36px;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.options li {
+.readonlyOptions li {
   font-size: 0.8rem;
   color: var(--text-secondary);
   background: var(--bg-tertiary);

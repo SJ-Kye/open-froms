@@ -79,6 +79,28 @@ export function useUpdateQuestionMutation(formId: number) {
   })
 }
 
+/**
+ * 두 문항의 순서를 맞바꿉니다.
+ *
+ * <p>순서 전용 API 는 없고 `PUT` 이 문항 전체를 교체하므로, **position 만 바꾼 전체 페이로드**를 두
+ * 번 보냅니다. `questions` 에 (form_id, position) 유니크 제약이 없어(V1__init.sql) 두 요청 사이에
+ * 값이 잠시 겹쳐도 무방합니다. 순차로 보내는 이유는 동시에 보내면 실패 시 어느 쪽이 적용됐는지
+ * 알기 어렵기 때문입니다.
+ */
+export function useReorderQuestionsMutation(formId: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (swap: {
+      first: { id: number; input: QuestionRequest }
+      second: { id: number; input: QuestionRequest }
+    }) => {
+      await formsApi.updateQuestion(formId, swap.first.id, swap.first.input)
+      await formsApi.updateQuestion(formId, swap.second.id, swap.second.input)
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: formKeys.detail(formId) }),
+  })
+}
+
 export function useDeleteQuestionMutation(formId: number) {
   const queryClient = useQueryClient()
   return useMutation({

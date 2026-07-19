@@ -1,0 +1,55 @@
+.panel {
+  position: sticky;
+  /* 상단 네비게이션(sticky) 높이만큼 내려 붙습니다. */
+  top: 88px;
+  height: fit-content;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 1rem;
+  margin-bottom: 6px;
+}
+
+.hint {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.typeButton {
+  justify-content: flex-start;
+  padding: 9px 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.typeButtonActive {
+  border-color: var(--accent-primary);
+  color: var(--accent-hover);
+}
+
+/* 좁은 화면에서는 사이드바가 본문 아래로 내려오므로 붙어 있을 필요가 없습니다. */
+@media (max-width: 900px) {
+  .panel {
+    position: static;
+  }
+
+  .buttons {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .typeButton {
+    flex: 1 1 140px;
+  }
+}

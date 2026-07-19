@@ -32,10 +32,16 @@ function newOption(label = ''): OptionDraft {
   return { key: `opt-${optionKeySeq}`, label }
 }
 
-/** 새 질문의 초기값입니다. 가장 흔한 단답형에서 시작합니다. */
-export function emptyDraft(): QuestionDraft {
+/**
+ * 새 질문의 초기값입니다. 유형을 인자로 받는 이유는 **빠른 추가** 때문입니다 — 사용자가 "객관식
+ * 추가"를 눌렀다면 단답형으로 만든 뒤 유형을 바꾸게 하는 것은 한 단계를 더 요구하는 셈입니다.
+ *
+ * <p>평점은 범위를 비워 두면 응답 화면이 1~5 를 기본 척도로 그립니다. 여기서 미리 채워 두면 그
+ * 값이 "사용자가 정한 범위"인지 "기본값"인지 구분되지 않으므로 비워 둡니다.
+ */
+export function emptyDraft(type: QuestionType = 'SHORT_TEXT'): QuestionDraft {
   return {
-    type: 'SHORT_TEXT',
+    type,
     title: '',
     required: false,
     minValue: '',
@@ -61,6 +67,19 @@ export function toDraft(question: QuestionResponse): QuestionDraft {
 
 export function addOption(draft: QuestionDraft): QuestionDraft {
   return { ...draft, options: [...draft.options, newOption()] }
+}
+
+/**
+ * 편집 중인 값이 저장된 값과 다른지 봅니다. **서버로 보낼 형태끼리** 비교하므로, 화면에만 있는
+ * 차이(선택지의 클라이언트 key, 공백만 다른 제목, 타입에 해당 없는 잔여 값)는 변경으로 세지
+ * 않습니다. 그래서 저장 직후 서버가 다듬은 값이 돌아와도 카드가 계속 «수정됨»으로 남지 않습니다.
+ */
+export function isDirty(draft: QuestionDraft, saved: QuestionResponse): boolean {
+  const position = saved.position
+  return (
+    JSON.stringify(toRequest(draft, position)) !==
+    JSON.stringify(toRequest(toDraft(saved), position))
+  )
 }
 
 /**

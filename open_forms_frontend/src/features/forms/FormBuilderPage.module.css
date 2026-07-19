@@ -1,48 +1,105 @@
-.back {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.88rem;
-  color: var(--text-secondary);
-  margin-bottom: 16px;
+/* proto 의 builder-layout 을 따릅니다: 본문 + 빠른 추가 사이드바. */
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 24px;
+  align-items: start;
 }
 
-.back:hover {
-  color: var(--accent-primary);
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
 }
 
-.head {
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+/* ── 폼 정보 ── */
+
+.infoCard {
+  /* 문서를 편집하는 느낌을 주려고 제목·설명을 무테 입력으로 두고, 카드 좌측에 강조 띠를 둡니다. */
+  border-left: 4px solid var(--accent-primary);
+  position: relative;
+}
+
+.infoHead {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
+  gap: 12px;
 }
 
-.headActions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+.titleInput {
+  width: 100%;
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  background: none;
+  border: none;
+  border-bottom: 1px solid transparent;
+  outline: none;
+  padding: 4px 0;
+  transition: var(--transition-smooth);
 }
 
-/* 발행 후에는 편집이 막히므로, 그 사실을 폼 정보 위에 먼저 알립니다. */
-.notice {
-  margin-bottom: 20px;
+.titleInput:hover {
+  border-bottom-color: var(--border-color);
+}
+
+.titleInput:focus {
+  border-bottom-color: var(--accent-primary);
+}
+
+.descriptionInput {
+  width: 100%;
+  margin-top: 10px;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  border-bottom: 1px solid transparent;
+  outline: none;
+  padding: 4px 0;
+  resize: vertical;
+  transition: var(--transition-smooth);
+}
+
+.descriptionInput:hover {
+  border-bottom-color: var(--border-color);
+}
+
+.descriptionInput:focus {
+  border-bottom-color: var(--accent-primary);
+}
+
+.titleInput::placeholder,
+.descriptionInput::placeholder {
+  color: var(--text-muted);
+  font-weight: 400;
 }
 
 .shareRow {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 14px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color);
   flex-wrap: wrap;
 }
 
 .shareLink {
-  flex: 1 1 260px;
+  flex: 1 1 240px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: var(--text-secondary);
   background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
@@ -52,13 +109,27 @@
   white-space: nowrap;
 }
 
+/* ── 질문 목록 ── */
+
 .sectionHead {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin: 32px 0 16px;
+  align-items: baseline;
+  gap: 10px;
   flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.sectionTitle {
+  font-size: 1.05rem;
+}
+
+/* 발행 후 편집이 막힌 이유는 질문 섹션 옆에 둡니다 — 그 제약이 적용되는 자리이기 때문입니다. */
+.lockNote {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }
 
 .questions {
@@ -67,17 +138,21 @@
   gap: 12px;
 }
 
-.readonlyValue {
-  padding: 12px 16px;
-  border-radius: var(--radius-md);
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-  font-size: 0.95rem;
-  min-height: 46px;
-  white-space: pre-wrap;
+.addButton {
+  padding: 15px;
+  border: 1.5px dashed var(--border-color);
+  background: none;
+  color: var(--text-secondary);
+  width: 100%;
+}
+
+.addButton:hover:not(:disabled) {
+  border-color: var(--accent-primary);
+  color: var(--accent-hover);
+  background: var(--accent-glow);
 }
 
 .muted {
   color: var(--text-muted);
+  font-weight: 400;
 }
