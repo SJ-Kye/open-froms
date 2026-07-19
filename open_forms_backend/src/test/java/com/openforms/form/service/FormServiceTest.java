@@ -17,8 +17,6 @@ import com.openforms.form.dto.FormStatusResponse;
 import com.openforms.form.dto.FormSummaryResponse;
 import com.openforms.form.repository.FormRepository;
 import com.openforms.form.repository.FormRepository.ResponseCountRow;
-import com.openforms.form.repository.QuestionOptionRepository;
-import com.openforms.form.repository.QuestionRepository;
 import com.openforms.user.domain.User;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -46,9 +44,7 @@ class FormServiceTest {
     @Mock
     private FormRepository formRepository;
     @Mock
-    private QuestionRepository questionRepository;
-    @Mock
-    private QuestionOptionRepository optionRepository;
+    private QuestionLoader questionLoader;
     @Mock
     private FormAccessGuard accessGuard;
     @Mock

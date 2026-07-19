@@ -4,6 +4,7 @@ import com.openforms.common.response.PageResponse;
 import com.openforms.form.domain.Form;
 import com.openforms.form.domain.FormStatus;
 import com.openforms.form.domain.Question;
+import com.openforms.form.domain.QuestionOption;
 import com.openforms.form.dto.CreateFormRequest;
 import com.openforms.form.dto.FormDetailResponse;
 import com.openforms.form.dto.FormStatusResponse;
@@ -13,8 +14,6 @@ import com.openforms.form.dto.QuestionResponse;
 import com.openforms.form.dto.UpdateFormRequest;
 import com.openforms.form.repository.FormRepository;
 import com.openforms.form.repository.FormRepository.ResponseCountRow;
-import com.openforms.form.repository.QuestionOptionRepository;
-import com.openforms.form.repository.QuestionRepository;
 import com.openforms.user.domain.User;
 import java.util.List;
 import java.util.Map;
@@ -36,17 +35,14 @@ public class FormService {
     private static final int MAX_SLUG_ATTEMPTS = 10;
 
     private final FormRepository formRepository;
-    private final QuestionRepository questionRepository;
-    private final QuestionOptionRepository optionRepository;
+    private final QuestionLoader questionLoader;
     private final FormAccessGuard accessGuard;
     private final SlugGenerator slugGenerator;
 
-    public FormService(FormRepository formRepository, QuestionRepository questionRepository,
-            QuestionOptionRepository optionRepository, FormAccessGuard accessGuard,
-            SlugGenerator slugGenerator) {
+    public FormService(FormRepository formRepository, QuestionLoader questionLoader,
+            FormAccessGuard accessGuard, SlugGenerator slugGenerator) {
         this.formRepository = formRepository;
-        this.questionRepository = questionRepository;
-        this.optionRepository = optionRepository;
+        this.questionLoader = questionLoader;
         this.accessGuard = accessGuard;
         this.slugGenerator = slugGenerator;
     }
@@ -114,19 +110,13 @@ public class FormService {
                 .collect(Collectors.toMap(ResponseCountRow::getFormId, ResponseCountRow::getCnt));
     }
 
-    /** 폼의 질문과 선택지를 position 순으로 조립합니다(선택지는 한 번에 조회해 N+1 회피). */
+    /** 폼의 질문과 선택지를 position 순으로 조립합니다(로딩·N+1 회피는 {@link QuestionLoader} 가 담당). */
     private List<QuestionResponse> loadQuestions(Long formId) {
-        List<Question> questions = questionRepository.findByForm_IdOrderByPositionAsc(formId);
-        if (questions.isEmpty()) {
-            return List.of();
-        }
-        List<Long> questionIds = questions.stream().map(Question::getId).toList();
-        Map<Long, List<OptionResponse>> optionsByQuestion = optionRepository
-                .findByQuestion_IdInOrderByPositionAsc(questionIds).stream()
-                .collect(Collectors.groupingBy(o -> o.getQuestion().getId(),
-                        Collectors.mapping(OptionResponse::from, Collectors.toList())));
+        List<Question> questions = questionLoader.questionsOf(formId);
+        Map<Long, List<QuestionOption>> optionsByQuestion = questionLoader.optionsByQuestionId(questions);
         return questions.stream()
-                .map(q -> QuestionResponse.of(q, optionsByQuestion.getOrDefault(q.getId(), List.of())))
+                .map(q -> QuestionResponse.of(q, optionsByQuestion.getOrDefault(q.getId(), List.of())
+                        .stream().map(OptionResponse::from).toList()))
                 .toList();
     }
 }
