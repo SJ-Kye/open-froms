@@ -1,6 +1,5 @@
 import { ChevronDown, ChevronUp, Plus, Trash2, X } from 'lucide-react'
 import ErrorBanner from '../../components/ErrorBanner'
-import Spinner from '../../components/Spinner'
 import type { ApiError } from '../../lib/apiError'
 import type { QuestionResponse, QuestionType } from '../../types/api'
 import { addOption, draftProblem, type QuestionDraft } from './questionDraft'
@@ -12,14 +11,15 @@ import styles from './QuestionCard.module.css'
  * 설문지에서는 값만 보여 줍니다.
  *
  * <p>«편집» 버튼을 눌러야 고칠 수 있던 이전 구조를 없앤 이유는, 오타 하나를 고치는 데 모드 전환이
- * 필요했고 한 번에 한 문항만 열 수 있었기 때문입니다. 대신 저장은 여전히 **카드 단위**입니다 —
- * 서버 API 가 문항 단위라 여러 문항을 한 번에 보내면 중간에 하나가 400 일 때 어디까지 저장되었는지
- * 알 수 없습니다.
+ * 필요했고 한 번에 한 문항만 열 수 있었기 때문입니다. 저장 버튼도 카드에서 걷어냈습니다 — 저장은
+ * 화면 하단에서 **한 번에** 이뤄집니다. 카드가 하는 일은 값을 고치고, 자리를 옮기고, 목록에서
+ * 빠지는 것까지입니다(모두 로컬).
  *
- * <p>편집 중인 값은 상위(빌더)가 보관합니다. 빠른 추가가 아직 저장되지 않은 카드의 유형을 바깥에서
- * 바꿔야 하고, 저장 성공 시 서버가 다듬은 값으로 되돌려 놓아야 하기 때문입니다.
+ * <p>편집 중인 값은 상위(빌더)가 보관합니다. 순서·삭제가 배열 조작이 되려면 목록의 주인이 값을
+ * 함께 들고 있어야 하고, 저장 뒤 서버가 다듬은 값으로 되돌려 놓는 것도 상위의 몫입니다.
  */
 export default function QuestionCard({
+  cardKey,
   question,
   draft,
   index,
@@ -28,13 +28,14 @@ export default function QuestionCard({
   saving,
   error,
   dirty,
+  showProblem,
   autoFocus = false,
   onDraftChange,
-  onSave,
-  onRevert,
   onDelete,
   onMove,
 }: {
+  /** 상위가 이 카드를 가리키는 키입니다(저장 실패 시 되짚기·스크롤 대상). */
+  cardKey: string
   /** 저장된 질문입니다. 아직 저장하지 않은 새 카드면 null 입니다. */
   question: QuestionResponse | null
   draft: QuestionDraft
@@ -44,11 +45,11 @@ export default function QuestionCard({
   saving: boolean
   error: ApiError | null
   dirty: boolean
+  /** 저장을 한 번이라도 시도한 뒤부터 검증 사유를 보여 줍니다(빈 새 카드에 잔소리하지 않도록). */
+  showProblem: boolean
   /** 방금 추가된 카드만 true 입니다. 여러 새 카드가 동시에 요구하면 포커스가 어디로 갈지 모릅니다. */
   autoFocus?: boolean
   onDraftChange: (draft: QuestionDraft) => void
-  onSave: () => void
-  onRevert: () => void
   onDelete: () => void
   onMove: (direction: -1 | 1) => void
 }) {
@@ -63,35 +64,33 @@ export default function QuestionCard({
   const cardClass = isNew ? styles.cardNew : dirty ? styles.cardDirty : ''
 
   return (
-    <article className={`card ${styles.card} ${cardClass}`} data-question-card={question?.id ?? 'new'}>
+    <article className={`card ${styles.card} ${cardClass}`} data-question-card={cardKey}>
       <div className={styles.head}>
         <span className={styles.index}>{index + 1}</span>
 
-        {/* 순서 변경은 저장된 문항에만 있습니다. 아직 서버에 없는 카드는 언제나 맨 끝입니다. */}
-        {!isNew && (
-          <div className={styles.moveGroup}>
-            <button
-              type="button"
-              className={styles.iconButton}
-              onClick={() => onMove(-1)}
-              disabled={index === 0 || saving}
-              aria-label="위로 이동"
-              title="위로 이동"
-            >
-              <ChevronUp size={16} />
-            </button>
-            <button
-              type="button"
-              className={styles.iconButton}
-              onClick={() => onMove(1)}
-              disabled={index === total - 1 || saving}
-              aria-label="아래로 이동"
-              title="아래로 이동"
-            >
-              <ChevronDown size={16} />
-            </button>
-          </div>
-        )}
+        {/* 순서는 저장 전까지 로컬이라 아직 서버에 없는 카드도 자리를 옮길 수 있습니다. */}
+        <div className={styles.moveGroup}>
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={() => onMove(-1)}
+            disabled={index === 0 || saving}
+            aria-label="위로 이동"
+            title="위로 이동"
+          >
+            <ChevronUp size={16} />
+          </button>
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={() => onMove(1)}
+            disabled={index === total - 1 || saving}
+            aria-label="아래로 이동"
+            title="아래로 이동"
+          >
+            <ChevronDown size={16} />
+          </button>
+        </div>
 
         <div className={styles.headRight}>
           <span className={styles.typePicker}>
@@ -207,11 +206,11 @@ export default function QuestionCard({
         <div className={styles.section}>
           <div className={styles.rangeRow}>
             <div className={styles.rangeField}>
-              <label className={styles.rangeLabel} htmlFor={`min-${question?.id ?? 'new'}`}>
+              <label className={styles.rangeLabel} htmlFor={`min-${cardKey}`}>
                 최솟값
               </label>
               <input
-                id={`min-${question?.id ?? 'new'}`}
+                id={`min-${cardKey}`}
                 type="number"
                 className="input-field"
                 placeholder="예: 1"
@@ -221,11 +220,11 @@ export default function QuestionCard({
               />
             </div>
             <div className={styles.rangeField}>
-              <label className={styles.rangeLabel} htmlFor={`max-${question?.id ?? 'new'}`}>
+              <label className={styles.rangeLabel} htmlFor={`max-${cardKey}`}>
                 최댓값
               </label>
               <input
-                id={`max-${question?.id ?? 'new'}`}
+                id={`max-${cardKey}`}
                 type="number"
                 className="input-field"
                 placeholder="예: 5"
@@ -254,26 +253,8 @@ export default function QuestionCard({
           필수 응답
         </label>
 
-        <div className={styles.footerActions}>
-          {/* 저장할 수 없는 이유는 저장 버튼 옆에 둡니다 — 눌러 보고 알게 하지 않습니다. */}
-          {(dirty || isNew) && problem && <span className={styles.problem}>{problem}</span>}
-          {dirty && !isNew && (
-            <button type="button" className="btn btn-secondary" onClick={onRevert} disabled={saving}>
-              되돌리기
-            </button>
-          )}
-          {(dirty || isNew) && (
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={onSave}
-              disabled={saving || problem !== null}
-            >
-              {saving && <Spinner size={14} />}
-              저장
-            </button>
-          )}
-        </div>
+        {/* 저장을 막는 이유는 카드 안에 둡니다 — 하단 저장 바에서는 어느 문항이 문제인지 모릅니다. */}
+        {showProblem && problem && <span className={styles.problem}>{problem}</span>}
       </div>
     </article>
   )

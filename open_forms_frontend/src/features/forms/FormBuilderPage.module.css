@@ -27,13 +27,6 @@
   position: relative;
 }
 
-.infoHead {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-}
-
 .titleInput {
   width: 100%;
   font-family: var(--font-heading);
@@ -155,4 +148,52 @@
 .muted {
   color: var(--text-muted);
   font-weight: 400;
+}
+
+/* ── 하단 일괄 저장 바 ── */
+
+/*
+ * 화면 아래에 붙어 따라옵니다. 문항이 늘어 스크롤이 길어져도 «저장하지 않은 것이 있다»는 사실과
+ * 저장 수단이 늘 같은 자리에 있어야 하기 때문입니다. 사이드바(sticky)와 달리 bottom 기준입니다.
+ */
+.saveBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
+  padding: 14px 18px;
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  /* 토스트(base.css)와 같은 그림자입니다 — 둘 다 본문 위에 떠 있는 요소입니다. */
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+}
+
+.saveBarInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.saveBarCount {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.saveBarError {
+  font-size: 0.8rem;
+  color: var(--error);
+}
+
+.saveBarActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
 }

@@ -206,21 +206,12 @@
   accent-color: var(--accent-primary);
 }
 
-.footerActions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-}
-
+/* 저장을 막는 사유입니다. 필수 응답 토글 반대편에 붙어 카드 안에서 눈에 띕니다. */
 .problem {
+  margin-left: auto;
   font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-.footerActions .btn {
-  padding: 7px 14px;
-  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--error);
 }
 
 /* ── 읽기 전용(발행·마감된 설문지) ── */
