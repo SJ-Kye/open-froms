@@ -130,3 +130,151 @@ export interface QuestionRequest {
   maxValue: number | null
   options: { label: string; position: number }[]
 }
+
+// ── 공개(응답자용) ──────────────────────────────────────────────────────────
+// 제작자용과 별도 DTO 입니다. 폼 id·질문 position·감사 컬럼이 없고, 대신 status 가 있습니다.
+
+export interface PublicOptionResponse {
+  id: number
+  label: string
+}
+
+/** 배열 순서가 곧 표시 순서입니다(서버가 position 을 보내지 않습니다). */
+export interface PublicQuestionResponse {
+  id: number
+  type: QuestionType
+  title: string
+  required: boolean
+  minValue: number | null
+  maxValue: number | null
+  options: PublicOptionResponse[]
+}
+
+/**
+ * 공개 링크로 조회한 폼입니다.
+ *
+ * `status` 가 있는 이유는 **종료된 폼도 200 으로 열리기** 때문입니다. 화면이 이 값을 보고 입력 폼과
+ * 마감 안내를 갈라야 합니다. 미발행(`DRAFT`)은 애초에 404 라 여기로 오지 않습니다.
+ */
+export interface PublicFormResponse {
+  slug: string
+  title: string
+  description: string | null
+  status: FormStatus
+  questions: PublicQuestionResponse[]
+}
+
+/**
+ * 질문 하나에 대한 응답입니다. 질문 타입에 맞는 필드 **하나만** 채웁니다.
+ * 답하지 않은 선택 질문은 항목 자체를 생략합니다.
+ */
+export interface AnswerRequest {
+  questionId: number
+  selectedOptionIds?: number[]
+  textValue?: string
+  numberValue?: number
+  /** `YYYY-MM-DD` */
+  dateValue?: string
+  /** `HH:mm` */
+  timeValue?: string
+}
+
+export interface SubmitResponseRequest {
+  answers: AnswerRequest[]
+}
+
+/** 제출 결과입니다. 익명이라 제출 내용을 되돌려주지 않고 접수 사실만 확인해 줍니다. */
+export interface SubmitResponseResult {
+  responseId: number
+  submittedAt: string
+}
+
+// ── 응답 조회(제작자용) ─────────────────────────────────────────────────────
+
+/** 목록 항목입니다. `answeredCount` 는 답한 **질문 수**라 체크박스로 3개를 골라도 1입니다. */
+export interface ResponseSummaryItem {
+  responseId: number
+  submittedAt: string
+  answeredCount: number
+  totalQuestions: number
+}
+
+export interface SelectedOption {
+  optionId: number
+  label: string
+}
+
+/**
+ * 응답 상세의 문항별 답변입니다. 서버가 **폼의 모든 질문**을 순서대로 담고, 답하지 않은 문항도
+ * `answered: false` 로 포함합니다. 체크박스의 여러 저장 행은 여기서 하나로 묶여 옵니다.
+ */
+export interface AnswerDetail {
+  questionId: number
+  type: QuestionType
+  title: string
+  required: boolean
+  answered: boolean
+  selectedOptions: SelectedOption[]
+  textValue: string | null
+  numberValue: number | null
+  dateValue: string | null
+  timeValue: string | null
+}
+
+export interface ResponseDetailResponse {
+  responseId: number
+  submittedAt: string
+  answers: AnswerDetail[]
+}
+
+// ── 집계 ───────────────────────────────────────────────────────────────────
+
+export interface DailyCount {
+  /** `YYYY-MM-DD` */
+  date: string
+  count: number
+}
+
+export interface OptionCount {
+  optionId: number
+  label: string
+  count: number
+}
+
+export interface ValueCount {
+  value: number
+  count: number
+}
+
+/**
+ * 질문 하나의 응답 분포입니다. 타입마다 채워지는 필드가 다르지만 **목록형 필드는 해당 없을 때도
+ * 빈 배열**이라(서버 계약) 화면이 방어 코드 없이 순회할 수 있습니다.
+ *
+ * `optionCounts` 에는 아무도 고르지 않은 선택지도 `count: 0` 으로 들어 있습니다 — 빼 버리면 차트에서
+ * 선택지가 통째로 사라져 마치 없었던 것처럼 보입니다.
+ */
+export interface QuestionStats {
+  questionId: number
+  type: QuestionType
+  title: string
+  required: boolean
+  answeredCount: number
+  average: number | null
+  optionCounts: OptionCount[]
+  valueCounts: ValueCount[]
+  recentTexts: string[]
+}
+
+/**
+ * 대시보드 집계입니다. 카드·추이·문항별 차트에 필요한 데이터를 한 번의 요청으로 모두 받습니다.
+ *
+ * `completionRate` 는 **0.0~1.0 비율**입니다(백분율이 아닙니다). `responsesByDate` 는 발행일부터
+ * 종료일(미종료면 오늘)까지 빈 날을 0 으로 채워 이어지므로, 화면에서 날짜를 메울 필요가 없습니다.
+ */
+export interface FormSummaryStats {
+  formId: number
+  totalResponses: number
+  completionRate: number
+  responsesByDate: DailyCount[]
+  questionSummaries: QuestionStats[]
+}
