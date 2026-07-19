@@ -10,7 +10,14 @@ import type { QuestionResponse, QuestionType } from '../../types/api'
 import QuestionCard from './QuestionCard'
 import QuickAddPanel from './QuickAddPanel'
 import { STATUS_LABELS } from './formStatus'
-import { emptyDraft, isDirty, toDraft, toRequest, type QuestionDraft } from './questionDraft'
+import {
+  emptyDraft,
+  isDirty,
+  newDraftKey,
+  toDraft,
+  toRequest,
+  type QuestionDraft,
+} from './questionDraft'
 import {
   useCreateQuestionMutation,
   useDeleteQuestionMutation,
@@ -42,9 +49,11 @@ export default function FormBuilderPage() {
   const [description, setDescription] = useState('')
   /** 저장된 문항의 편집 상태입니다(질문 id → 초안). */
   const [drafts, setDrafts] = useState<Record<number, QuestionDraft>>({})
-  /** 아직 저장하지 않은 새 문항입니다. 한 번에 하나만 둡니다(addQuestion 주석 참고). */
-  const [newDraft, setNewDraft] = useState<QuestionDraft | null>(null)
-  const [savingId, setSavingId] = useState<number | 'new' | null>(null)
+  /** 아직 저장하지 않은 새 문항들입니다. 서버 id 가 없으므로 클라이언트 키로 구분합니다. */
+  const [newDrafts, setNewDrafts] = useState<Array<{ key: string; draft: QuestionDraft }>>([])
+  /** 방금 추가한 카드입니다. 포커스를 여기에만 줍니다. */
+  const [focusKey, setFocusKey] = useState<string | null>(null)
+  const [savingId, setSavingId] = useState<number | string | null>(null)
   const [cardErrors, setCardErrors] = useState<Record<string, ApiError>>({})
   const [pendingDelete, setPendingDelete] = useState<QuestionResponse | null>(null)
   const [copied, setCopied] = useState(false)
@@ -93,15 +102,16 @@ export default function FormBuilderPage() {
   const draftOf = (question: QuestionResponse) => drafts[question.id] ?? toDraft(question)
 
   /**
-   * 새 문항 카드를 띄웁니다. 서버에 즉시 만들지 않는 이유는 제목이 `@NotBlank` 라 빈 질문 POST 가
-   * 400 이기 때문입니다.
+   * 새 문항 카드를 목록 끝에 **하나 더** 붙입니다. 서버에 즉시 만들지 않는 이유는 제목이
+   * `@NotBlank` 라 빈 질문 POST 가 400 이기 때문입니다.
    *
-   * <p>미저장 카드는 하나로 제한합니다. 여러 개를 띄우면 position 배정이 모호해지고, 저장하지 않은
-   * 채 화면을 떠나면 만든 줄 알았던 문항이 조용히 사라집니다. 이미 카드가 떠 있으면 유형만 바꿉니다.
+   * <p>이전에는 미저장 카드를 하나로 제한하고 이미 떠 있으면 유형만 바꿨는데, 그러면 «추가» 버튼이
+   * 추가를 하지 않습니다. 유형 버튼을 세 번 누른 사람이 기대하는 것은 문항 세 개입니다.
    */
   function addQuestion(type: QuestionType) {
-    setNewDraft((current) => (current ? { ...current, type } : emptyDraft(type)))
-    setCardErrors(({ new: _dropped, ...rest }) => rest)
+    const key = newDraftKey()
+    setNewDrafts((current) => [...current, { key, draft: emptyDraft(type) }])
+    setFocusKey(key)
   }
 
   async function saveDetails() {
@@ -113,28 +123,40 @@ export default function FormBuilderPage() {
     }
   }
 
-  async function saveQuestion(question: QuestionResponse | null, draft: QuestionDraft) {
-    const key = question ? String(question.id) : 'new'
-    setSavingId(question ? question.id : 'new')
+  async function saveSaved(question: QuestionResponse, draft: QuestionDraft) {
+    const key = String(question.id)
+    setSavingId(question.id)
     setCardErrors(({ [key]: _dropped, ...rest }) => rest)
     try {
-      if (question) {
-        // 수정은 순서를 바꾸지 않으므로 원래 position 을 유지합니다.
-        const saved = await updateQuestion.mutateAsync({
-          questionId: question.id,
-          input: toRequest(draft, question.position),
-        })
-        // 서버가 다듬은 값(공백 제거·빈 선택지 제외)으로 되돌려 놓아야 카드가 계속 «수정됨» 으로
-        // 남지 않습니다.
-        setDrafts((previous) => ({ ...previous, [saved.id]: toDraft(saved) }))
-        showToast('문항을 저장했습니다.')
-      } else {
-        await createQuestion.mutateAsync(toRequest(draft, loaded.questions.length + 1))
-        setNewDraft(null)
-        showToast('문항을 추가했습니다.')
-      }
+      // 수정은 순서를 바꾸지 않으므로 원래 position 을 유지합니다.
+      const saved = await updateQuestion.mutateAsync({
+        questionId: question.id,
+        input: toRequest(draft, question.position),
+      })
+      // 서버가 다듬은 값(공백 제거·빈 선택지 제외)으로 되돌려 놓아야 카드가 계속 «수정됨» 으로
+      // 남지 않습니다.
+      setDrafts((previous) => ({ ...previous, [saved.id]: toDraft(saved) }))
+      showToast('문항을 저장했습니다.')
     } catch (caught) {
       // 저장에 실패해도 입력을 지우지 않습니다. 방금 쓴 내용을 잃으면 다시 써야 합니다.
+      setCardErrors((previous) => ({ ...previous, [key]: toApiError(caught) }))
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  /**
+   * 미저장 카드 하나를 서버에 만듭니다. position 은 **그 카드가 화면에서 차지한 자리**로 보냅니다 —
+   * 미저장 카드가 여러 개일 때 순서대로 저장하지 않아도 목록에서 본 순서가 유지됩니다.
+   */
+  async function createNew(key: string, draft: QuestionDraft, offset: number) {
+    setSavingId(key)
+    setCardErrors(({ [key]: _dropped, ...rest }) => rest)
+    try {
+      await createQuestion.mutateAsync(toRequest(draft, loaded.questions.length + offset + 1))
+      setNewDrafts((current) => current.filter((item) => item.key !== key))
+      showToast('문항을 추가했습니다.')
+    } catch (caught) {
       setCardErrors((previous) => ({ ...previous, [key]: toApiError(caught) }))
     } finally {
       setSavingId(null)
@@ -268,7 +290,7 @@ export default function FormBuilderPage() {
               onDraftChange={(draft) =>
                 setDrafts((previous) => ({ ...previous, [question.id]: draft }))
               }
-              onSave={() => void saveQuestion(question, draftOf(question))}
+              onSave={() => void saveSaved(question, draftOf(question))}
               onRevert={() =>
                 setDrafts((previous) => ({ ...previous, [question.id]: toDraft(question) }))
               }
@@ -277,25 +299,36 @@ export default function FormBuilderPage() {
             />
           ))}
 
-          {newDraft && (
+          {newDrafts.map((item, offset) => (
             <QuestionCard
+              key={item.key}
               question={null}
-              draft={newDraft}
-              index={form.questions.length}
-              total={form.questions.length + 1}
+              draft={item.draft}
+              index={form.questions.length + offset}
+              total={form.questions.length + newDrafts.length}
               editable
-              saving={savingId === 'new'}
-              error={cardErrors.new ?? null}
+              saving={savingId === item.key}
+              error={cardErrors[item.key] ?? null}
               dirty
-              onDraftChange={setNewDraft}
-              onSave={() => void saveQuestion(null, newDraft)}
-              onRevert={() => setNewDraft(null)}
-              onDelete={() => setNewDraft(null)}
+              // 여러 카드를 연달아 추가할 수 있으므로 포커스는 **방금 추가한** 카드만 가져갑니다.
+              autoFocus={focusKey === item.key}
+              onDraftChange={(draft) =>
+                setNewDrafts((current) =>
+                  current.map((entry) => (entry.key === item.key ? { ...entry, draft } : entry)),
+                )
+              }
+              onSave={() => void createNew(item.key, item.draft, offset)}
+              onRevert={() =>
+                setNewDrafts((current) => current.filter((entry) => entry.key !== item.key))
+              }
+              onDelete={() =>
+                setNewDrafts((current) => current.filter((entry) => entry.key !== item.key))
+              }
               onMove={() => undefined}
             />
-          )}
+          ))}
 
-          {questionsEditable && !newDraft && (
+          {questionsEditable && (
             <button
               type="button"
               className={`btn ${styles.addButton}`}
@@ -317,11 +350,7 @@ export default function FormBuilderPage() {
       </div>
 
       {questionsEditable && (
-        <QuickAddPanel
-          onAdd={addQuestion}
-          activeType={newDraft?.type ?? null}
-          disabled={savingId !== null}
-        />
+        <QuickAddPanel onAdd={addQuestion} disabled={savingId !== null} />
       )}
 
       <ConfirmDialog

@@ -33,11 +33,6 @@
   font-weight: 500;
 }
 
-.typeButtonActive {
-  border-color: var(--accent-primary);
-  color: var(--accent-hover);
-}
-
 /* 좁은 화면에서는 사이드바가 본문 아래로 내려오므로 붙어 있을 필요가 없습니다. */
 @media (max-width: 900px) {
   .panel {

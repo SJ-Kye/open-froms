@@ -12,12 +12,9 @@ import styles from './QuickAddPanel.module.css'
  */
 export default function QuickAddPanel({
   onAdd,
-  activeType,
   disabled,
 }: {
   onAdd: (type: QuestionType) => void
-  /** 아직 저장하지 않은 카드가 있으면 그 유형입니다. 버튼이 현재 상태를 드러냅니다. */
-  activeType: QuestionType | null
   disabled: boolean
 }) {
   return (
@@ -28,17 +25,15 @@ export default function QuickAddPanel({
           빠른 문항 추가
         </h2>
         <p className={styles.hint}>
-          유형을 고르면 그 형태의 문항이 목록 끝에 추가됩니다. 저장하기 전에는 다른 유형을 눌러
-          바꿀 수 있습니다.
+          누를 때마다 그 형태의 문항이 목록 끝에 하나씩 추가됩니다. 유형은 카드에서 다시 바꿀 수
+          있습니다.
         </p>
         <div className={styles.buttons}>
           {QUESTION_TYPES.map((meta) => (
             <button
               key={meta.value}
               type="button"
-              className={`btn btn-secondary ${styles.typeButton} ${
-                activeType === meta.value ? styles.typeButtonActive : ''
-              }`}
+              className={`btn btn-secondary ${styles.typeButton}`}
               onClick={() => onAdd(meta.value)}
               disabled={disabled}
               title={meta.hint}

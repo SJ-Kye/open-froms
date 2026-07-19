@@ -28,6 +28,7 @@ export default function QuestionCard({
   saving,
   error,
   dirty,
+  autoFocus = false,
   onDraftChange,
   onSave,
   onRevert,
@@ -43,6 +44,8 @@ export default function QuestionCard({
   saving: boolean
   error: ApiError | null
   dirty: boolean
+  /** 방금 추가된 카드만 true 입니다. 여러 새 카드가 동시에 요구하면 포커스가 어디로 갈지 모릅니다. */
+  autoFocus?: boolean
   onDraftChange: (draft: QuestionDraft) => void
   onSave: () => void
   onRevert: () => void
@@ -138,7 +141,7 @@ export default function QuestionCard({
         disabled={saving}
         maxLength={500}
         // 빠른 추가로 만든 카드는 곧바로 입력할 수 있어야 합니다.
-        autoFocus={isNew}
+        autoFocus={autoFocus}
       />
       {error?.fieldErrors.title && <p className="field-error">{error.fieldErrors.title}</p>}
       <p className={styles.hint}>응답 화면: {meta.hint}</p>

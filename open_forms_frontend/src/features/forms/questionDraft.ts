@@ -32,6 +32,17 @@ function newOption(label = ''): OptionDraft {
   return { key: `opt-${optionKeySeq}`, label }
 }
 
+let draftKeySeq = 0
+
+/**
+ * 아직 저장하지 않은 문항의 렌더 키입니다. 서버 id 가 없고 제목은 비어 있거나 겹칠 수 있어,
+ * 목록에서 안정적으로 자기 자신을 가리킬 값이 따로 필요합니다(선택지의 key 와 같은 이유).
+ */
+export function newDraftKey(): string {
+  draftKeySeq += 1
+  return `new-${draftKeySeq}`
+}
+
 /**
  * 새 질문의 초기값입니다. 유형을 인자로 받는 이유는 **빠른 추가** 때문입니다 — 사용자가 "객관식
  * 추가"를 눌렀다면 단답형으로 만든 뒤 유형을 바꾸게 하는 것은 한 단계를 더 요구하는 셈입니다.
