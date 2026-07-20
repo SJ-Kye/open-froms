@@ -125,3 +125,17 @@ erDiagram
 `V1__init.sql` → `V2__api_call_logs.sql` → `V3__form_lifecycle_timestamps.sql` → `V4__refresh_tokens.sql`
 
 운영(PostgreSQL)·테스트(H2 PostgreSQL 호환 모드) 동일 스크립트. `ddl-auto=validate`로 불일치 시 기동 실패.
+
+### 데모 시드 (`db/seed/V900__demo_data.sql`)
+
+첫 기동에서 바로 대시보드를 볼 수 있도록 계정 3 · 폼 18 · 질문 80 · 응답 227 · 답변 1,155 건을 넣습니다.
+스키마가 아니라 데이터이므로 `db/migration` 과 폴더를 나눴고, 그 경계가 곧 **테스트 격리**입니다 —
+테스트는 `db/migration` 만 읽으므로 시드가 기대값을 흔들지 않고, 대신 시드 스크립트는 PostgreSQL 전용
+문법(`generate_series`·`hashtext` 등)을 자유롭게 씁니다. 버전은 이후 추가될 스키마 마이그레이션보다
+항상 뒤에 오도록 `V900` 으로 띄웠습니다. 빈 DB 로 시작하려면 `SPRING_FLYWAY_LOCATIONS=classpath:db/migration`.
+
+응답 분포는 일부러 균등하지 않게 만듭니다. 선택지는 질문마다 다른 순서로 줄 세운 뒤 앞쪽에 치우친
+난수로 뽑아(0표 선택지도 남습니다), 평점은 문항마다 분포를 달리해 평균 카드가 서로 다른 값이 되게 하고,
+선택 문항은 응답의 78% 만 채워 완료율이 1.0 에 붙지 않게 합니다. 이 78% 판정만 `random()` 이 아니라
+`(응답 id, 질문 id)` 해시를 쓰는데, 질문 컬럼만 참조하는 조건은 플래너가 조인 전 `questions` 스캔으로
+내려 «질문 단위로 전부 채움/전부 건너뜀»이 되기 때문입니다(그 경우 완료율이 0.8 아니면 1.0 만 나옵니다).

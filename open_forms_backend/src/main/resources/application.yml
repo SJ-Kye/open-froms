@@ -27,7 +27,10 @@ spring:
 
   flyway:
     enabled: true
-    locations: classpath:db/migration
+    # db/seed 는 스키마가 아니라 데모 데이터입니다. 폴더를 나눈 이유는 테스트 격리로,
+    # 테스트(src/test/resources/application.yml)는 db/migration 만 읽어 시드의 영향을 받지 않습니다.
+    # 빈 DB 로 시작하려면 SPRING_FLYWAY_LOCATIONS=classpath:db/migration 으로 덮어씁니다.
+    locations: classpath:db/migration,classpath:db/seed
 
 # 인증 토큰 설정
 app:
